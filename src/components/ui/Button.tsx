@@ -14,11 +14,11 @@ interface ButtonProps {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-r from-amber/90 to-amber-glow/80 text-void font-semibold hover:from-amber hover:to-amber-glow glow-amber',
+    'bg-gradient-to-r from-amber to-amber-glow text-void font-semibold shadow-[0_0_24px_rgba(245,158,11,0.35)] hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] hover:from-amber-glow hover:to-amber',
   secondary:
-    'border border-cyan/40 text-cyan-glow bg-cyan/5 hover:bg-cyan/10 hover:border-cyan/60',
+    'border border-cyan/35 text-cyan-glow bg-cyan/5 hover:bg-cyan/12 hover:border-cyan/60 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)]',
   ghost:
-    'border border-border/60 text-text hover:border-muted hover:bg-elevated/50',
+    'border border-border/70 text-text hover:border-muted/60 hover:bg-elevated/60 hover:text-text-bright',
 }
 
 export function Button({
@@ -38,8 +38,8 @@ export function Button({
         target={external ? '_blank' : undefined}
         rel={external ? 'noopener noreferrer' : undefined}
         className={classes}
-        whileHover={{ scale: 1.02, y: -1 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.03, y: -1 }}
+        whileTap={{ scale: 0.97 }}
       >
         {children}
       </motion.a>
@@ -51,8 +51,8 @@ export function Button({
       type="button"
       onClick={onClick}
       className={classes}
-      whileHover={{ scale: 1.02, y: -1 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.03, y: -1 }}
+      whileTap={{ scale: 0.97 }}
     >
       {children}
     </motion.button>

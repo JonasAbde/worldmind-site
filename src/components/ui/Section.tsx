@@ -24,29 +24,43 @@ interface SectionHeaderProps {
   title: string
   subtitle?: string
   align?: 'left' | 'center'
+  gradient?: 'cyan' | 'amber' | 'none'
 }
 
-export function SectionHeader({ eyebrow, title, subtitle, align = 'left' }: SectionHeaderProps) {
+export function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+  align = 'left',
+  gradient = 'none',
+}: SectionHeaderProps) {
   const alignClass = align === 'center' ? 'text-center mx-auto' : ''
+  const titleClass =
+    gradient === 'cyan'
+      ? 'text-gradient-cyan'
+      : gradient === 'amber'
+        ? 'text-gradient-amber'
+        : 'text-text-bright'
 
   return (
     <motion.div
       className={`mb-12 md:mb-16 max-w-3xl ${alignClass}`}
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
     >
       {eyebrow && (
-        <p className="font-mono text-xs tracking-[0.2em] uppercase text-cyan/80 mb-3">
-          {eyebrow}
-        </p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-px w-8 bg-gradient-to-r from-cyan/60 to-transparent" />
+          <p className="font-mono text-xs tracking-[0.25em] uppercase text-cyan/70">{eyebrow}</p>
+        </div>
       )}
-      <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold text-text-bright tracking-tight">
+      <h2 className={`font-display text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] ${titleClass}`}>
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-4 text-lg text-muted leading-relaxed">{subtitle}</p>
+        <p className="mt-5 text-lg text-muted leading-relaxed">{subtitle}</p>
       )}
     </motion.div>
   )
