@@ -161,6 +161,42 @@ body {
   animation: pulse-ring 2s ease-out infinite;
 }
 
+/* ── Magnetic button hover ── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255,255,255,0.07) 50%,
+    transparent 60%
+  );
+  background-size: 200% auto;
+  animation: shimmer 3.5s linear infinite;
+}
+
+/* ── Section enter animation ── */
+@keyframes section-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Glow pulse on interactive elements ── */
+@keyframes glow-pulse-cyan {
+  0%, 100% { box-shadow: 0 0 16px rgba(34,211,238,0.12); }
+  50%       { box-shadow: 0 0 32px rgba(34,211,238,0.28); }
+}
+.glow-pulse-cyan {
+  animation: glow-pulse-cyan 3s ease-in-out infinite;
+}
+
+/* ── Fog / depth ── */
+.vignette {
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(4,6,10,0.6) 100%);
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;

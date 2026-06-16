@@ -40,7 +40,7 @@ export function Card({ children, accent = 'neutral', className = '', delay = 0 }
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+      whileHover={{ y: -4, transition: { duration: 0.18 } }}
     >
       {/* Top accent strip */}
       <div className={`absolute top-0 left-4 right-4 h-px bg-gradient-to-r ${accentStrip[accent]} opacity-70`} />

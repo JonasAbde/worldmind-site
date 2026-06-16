@@ -14,7 +14,7 @@ interface ButtonProps {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-gradient-to-r from-amber to-amber-glow text-void font-semibold shadow-[0_0_24px_rgba(245,158,11,0.35)] hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] hover:from-amber-glow hover:to-amber',
+    'relative overflow-hidden bg-gradient-to-r from-amber to-amber-glow text-void font-semibold shadow-[0_0_24px_rgba(245,158,11,0.35)] hover:shadow-[0_0_44px_rgba(245,158,11,0.55)] hover:from-amber-glow hover:to-amber shimmer',
   secondary:
     'border border-cyan/35 text-cyan-glow bg-cyan/5 hover:bg-cyan/12 hover:border-cyan/60 hover:shadow-[0_0_20px_rgba(34,211,238,0.12)]',
   ghost:
