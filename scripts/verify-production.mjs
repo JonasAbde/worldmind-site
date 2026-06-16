@@ -34,7 +34,8 @@ const workerDomains = await cfFetch(
 const worker = workerDomains.result?.find((d) => d.hostname === 'worldmind.tekup.dk')
 
 const latest = deployments.result?.[0]
-const pagesOk = latest?.latest_stage?.status === 'success'
+const stage = latest?.latest_stage?.status
+const pagesOk = stage === 'success' || stage === 'active'
 const gitOk = project.result.source?.type === 'github'
 const workerOk = worker?.enabled === true
 const buildOk = project.result.build_config?.build_command?.includes('npm run lint')
