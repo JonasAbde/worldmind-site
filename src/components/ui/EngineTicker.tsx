@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 const ITEMS = [
   'v1.0-rc8',
@@ -18,6 +19,7 @@ const ITEMS = [
 ]
 
 export function EngineTicker() {
+  const reduced = usePrefersReducedMotion()
   const doubled = [...ITEMS, ...ITEMS]
 
   return (
@@ -25,21 +27,35 @@ export function EngineTicker() {
       <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-void to-transparent z-10 pointer-events-none" />
       <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-void to-transparent z-10 pointer-events-none" />
 
-      <motion.div
-        className="flex gap-10 whitespace-nowrap"
-        animate={{ x: ['0%', '-50%'] }}
-        transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-      >
-        {doubled.map((item, i) => (
-          <span
-            key={`${item}-${i}`}
-            className="inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.2em] text-muted/70"
-          >
-            <span className="w-1 h-1 rounded-full bg-cyan/50" />
-            {item}
-          </span>
-        ))}
-      </motion.div>
+      {reduced ? (
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 px-6">
+          {ITEMS.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-muted/70"
+            >
+              <span className="w-1 h-1 rounded-full bg-cyan/50" />
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          className="flex gap-10 whitespace-nowrap"
+          animate={{ x: ['0%', '-50%'] }}
+          transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+        >
+          {doubled.map((item, i) => (
+            <span
+              key={`${item}-${i}`}
+              className="inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.2em] text-muted/70"
+            >
+              <span className="w-1 h-1 rounded-full bg-cyan/50" />
+              {item}
+            </span>
+          ))}
+        </motion.div>
+      )}
     </div>
   )
 }

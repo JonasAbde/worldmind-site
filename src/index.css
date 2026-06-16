@@ -197,6 +197,27 @@ body {
   background: radial-gradient(ellipse at center, transparent 60%, rgba(4,6,10,0.6) 100%);
 }
 
+/* ── Reduced motion budget (Lighthouse + a11y) ── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .cursor-blink,
+  .pulse-ring,
+  .shimmer {
+    animation: none !important;
+  }
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;

@@ -8,6 +8,7 @@ export function IntroSequence() {
   const reduced = usePrefersReducedMotion()
   const [visible, setVisible] = useState(() => {
     if (typeof window === 'undefined') return false
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false
     return !window.sessionStorage.getItem(STORAGE_KEY)
   })
 

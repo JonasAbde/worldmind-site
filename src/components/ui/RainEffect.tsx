@@ -1,18 +1,22 @@
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 export function RainEffect() {
+  const reduced = usePrefersReducedMotion()
   const drops = useMemo(
     () =>
-      Array.from({ length: 60 }, (_, i) => ({
+      Array.from({ length: reduced ? 0 : 60 }, (_, i) => ({
         id: i,
         left: `${(i * 17) % 100}%`,
         delay: (i * 0.13) % 3,
         duration: 1.2 + (i % 5) * 0.3,
         opacity: 0.15 + (i % 4) * 0.08,
       })),
-    [],
+    [reduced],
   )
+
+  if (reduced) return null
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
