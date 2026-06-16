@@ -42,8 +42,11 @@ function TypedCommandLine() {
         const t = setTimeout(() => setDisplayed(displayed.slice(0, -1)), 24)
         return () => clearTimeout(t)
       } else {
-        setCmdIndex((i) => (i + 1) % TYPED_COMMANDS.length)
-        setPhase('typing')
+        const t = setTimeout(() => {
+          setCmdIndex((i) => (i + 1) % TYPED_COMMANDS.length)
+          setPhase('typing')
+        }, 0)
+        return () => clearTimeout(t)
       }
     }
   }, [displayed, phase, cmdIndex])
@@ -83,6 +86,8 @@ export function Hero() {
           src="/assets/worldmind-hero-key-art.png"
           alt="Cinematic key art for WorldMind showing New Aarhus District 01 with simulation overlays"
           className="w-full h-full object-cover"
+          fetchPriority="high"
+          decoding="async"
           onError={(e) => { e.currentTarget.style.display = 'none' }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-void/55 via-void/30 to-void" />

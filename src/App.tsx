@@ -25,7 +25,7 @@ function App() {
       <ScrollProgress />
       <AmbientCursor />
       <Header />
-      <main>
+      <main id="main-content">
         <Hero />
         <EngineTicker />
         <SectionDivider label="vertical slice" />

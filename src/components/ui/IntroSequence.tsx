@@ -6,17 +6,19 @@ const STORAGE_KEY = 'worldmind-intro-seen'
 
 export function IntroSequence() {
   const reduced = usePrefersReducedMotion()
-  const [visible, setVisible] = useState(false)
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !window.sessionStorage.getItem(STORAGE_KEY)
+  })
 
   useEffect(() => {
-    if (reduced || sessionStorage.getItem(STORAGE_KEY)) return
-    setVisible(true)
+    if (reduced || !visible) return
     const t = setTimeout(() => {
       setVisible(false)
-      sessionStorage.setItem(STORAGE_KEY, '1')
+      window.sessionStorage.setItem(STORAGE_KEY, '1')
     }, 2200)
     return () => clearTimeout(t)
-  }, [reduced])
+  }, [reduced, visible])
 
   return (
     <AnimatePresence>

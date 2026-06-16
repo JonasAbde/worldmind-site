@@ -29,6 +29,12 @@ export function Header() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
     >
+      <a
+        href="#main-content"
+        className="absolute left-4 top-[-44px] focus:top-3 z-[80] rounded-md border border-cyan/40 bg-void px-3 py-1.5 font-mono text-xs text-cyan-glow transition-all"
+      >
+        Skip to content
+      </a>
       <div className="max-w-6xl mx-auto px-6 md:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <a href="#" className="flex items-center gap-3 group">
@@ -51,7 +57,7 @@ export function Header() {
         </a>
 
         {/* Nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Primary">
           {NAV.map((link) => (
             <a
               key={link.href}
