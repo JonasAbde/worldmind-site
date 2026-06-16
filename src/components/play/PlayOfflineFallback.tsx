@@ -22,10 +22,17 @@ export function PlayOfflineFallback() {
           Core unreachable
         </h1>
         <p className="text-muted leading-relaxed mb-8 max-w-2xl">
-          WorldMind play-server is not running at{' '}
-          <code className="font-mono text-xs text-cyan-glow/90 bg-elevated px-1.5 py-0.5 rounded border border-border">
-            {CORE_URL}
-          </code>
+          WorldMind play-server is not running
+          {CORE_URL ? (
+            <>
+              {' '}at{' '}
+              <code className="font-mono text-xs text-cyan-glow/90 bg-elevated px-1.5 py-0.5 rounded border border-border">
+                {CORE_URL}
+              </code>
+            </>
+          ) : (
+            <> (same-origin — configure Worker <code className="font-mono text-xs">WORLDMIND_CORE_ORIGIN</code>)</>
+          )}
           . Start the simulation core locally, or browse the demo commands below.
         </p>
 

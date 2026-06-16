@@ -1,25 +1,40 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
-import { PRODUCT } from '../../data/product'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchHealth,
   fetchState,
+  matchMajorDecision,
+  postBranch,
   postCommand,
+  postSave,
   type ConsequenceBeat,
+  type DistrictView,
   type GameShell,
   type HealthResponse,
+  type MajorDecision,
+  type NpcCard,
   type VisualCues,
+  type WalkAnimation,
 } from '../../lib/play-api'
-import { ConsequencePanel } from './ConsequencePanel'
+import { useDistrictWalkAnimation } from '../../hooks/useDistrictWalkAnimation'
+import { usePlayAudioCues } from '../../hooks/usePlayAudioCues'
+import { InteriorOverlay } from './3d/InteriorOverlay'
 import type { Selection } from './3d/district-scene-types'
+import { enrichSelection } from './3d/enrich-selection'
+import { HowToPlay3DOverlay, readHowToPlayDismissed, dismissHowToPlay } from './3d/HowToPlay3DOverlay'
+import { PlayFeedbackToast, type PlayFeedbackToastState } from './PlayFeedbackToast'
+import { NpcInteractionDrawer } from './NpcInteractionDrawer'
+import { MajorDecisionModal } from './MajorDecisionModal'
 import { PlayOfflineFallback } from './PlayOfflineFallback'
+import { PlayBrandFrame } from './PlayBrandFrame'
+import { PlayGameHud } from './hud/PlayGameHud'
+import type { DockTab } from './hud/PlayGameDock'
+import type { ExploreCameraMode } from './3d/PlayerFollowCamera'
 
 const Play3DCanvas = lazy(() =>
   import('./3d/Play3DCanvas').then((m) => ({ default: m.Play3DCanvas })),
 )
 
 type BootPhase = 'loading' | 'offline' | 'ready'
-type CameraMode = 'walk' | 'orbit'
 
 export function WorldMindPlay3D() {
   const [phase, setPhase] = useState<BootPhase>('loading')
@@ -29,10 +44,41 @@ export function WorldMindPlay3D() {
   const [selection, setSelection] = useState<Selection | null>(null)
   const [output, setOutput] = useState('')
   const [consequenceBeat, setConsequenceBeat] = useState<ConsequenceBeat | null>(null)
-  const [command, setCommand] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cameraMode, setCameraMode] = useState<CameraMode>('walk')
+  const [pendingDecision, setPendingDecision] = useState<{
+    decision: MajorDecision
+    command: string
+  } | null>(null)
+  const [cameraMode, setCameraMode] = useState<ExploreCameraMode>('follow')
+  const [interiorOpen, setInteriorOpen] = useState(false)
+  const [walkAnimation, setWalkAnimation] = useState<WalkAnimation | null>(null)
+  const [pendingVisualCues, setPendingVisualCues] = useState<VisualCues | null>(null)
+  const [districtView, setDistrictView] = useState<DistrictView | null>(null)
+  const [pendingDistrictView, setPendingDistrictView] = useState<DistrictView | null>(null)
+  const [dockOpen, setDockOpen] = useState(false)
+  const [dockTab, setDockTab] = useState<DockTab>('quest')
+  const [mapCollapsed, setMapCollapsed] = useState(false)
+  const [questExpanded, setQuestExpanded] = useState(false)
+  const [selectedNpc, setSelectedNpc] = useState<NpcCard | null>(null)
+  const [howToOpen, setHowToOpen] = useState(false)
+  const [toast, setToast] = useState<PlayFeedbackToastState | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+  const busyRef = useRef(false)
+
+  const { playCues } = usePlayAudioCues()
+
+  const showToast = useCallback((next: PlayFeedbackToastState, autoDismissMs = 5200) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    setToast(next)
+    toastTimerRef.current = window.setTimeout(() => setToast(null), autoDismissMs)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    }
+  }, [])
 
   const boot = useCallback(async () => {
     setPhase('loading')
@@ -42,6 +88,8 @@ export function WorldMindPlay3D() {
       const state = await fetchState()
       setShell(state.gameShell)
       setVisualCues(state.visualCues ?? null)
+      setDistrictView(state.districtView ?? null)
+      setHowToOpen(!readHowToPlayDismissed())
       setPhase('ready')
     } catch {
       setPhase('offline')
@@ -52,77 +100,329 @@ export function WorldMindPlay3D() {
     void boot()
   }, [boot])
 
-  const runCommand = async (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || busy) return
-    setBusy(true)
-    setError(null)
-    try {
-      const res = await postCommand(trimmed)
+  const applyCommandResult = useCallback(
+    (res: Awaited<ReturnType<typeof postCommand>>, options?: { toastTitle?: string }) => {
       const result = res.result
       if (result?.gameShell) setShell(result.gameShell)
       setConsequenceBeat(result?.consequenceBeat ?? null)
-      const state = await fetchState()
-      setVisualCues(state.visualCues ?? null)
-      setShell(state.gameShell)
-      setOutput(result?.text ?? res.text ?? 'Command completed.')
-      setSelection(null)
+      playCues(result?.audioCues)
+
+      const lines = [result?.text ?? res.text ?? 'Command completed.']
+      if (result?.leno?.summary) lines.push(`Leno: ${result.leno.summary}`)
+      if (result?.majorDecisionPrompt?.label) {
+        lines.push(`Major decision: ${result.majorDecisionPrompt.label}`)
+      }
+      if (result?.dialogue?.message) lines.push(result.dialogue.message)
+      const resultText = lines.filter(Boolean).join('\n\n')
+      setOutput(resultText)
+
+      if (options?.toastTitle) {
+        showToast({
+          title: options.toastTitle,
+          message: resultText.split('\n')[0]?.slice(0, 180) || resultText.slice(0, 180),
+          tone: 'ok',
+        })
+      }
+    },
+    [playCues, showToast],
+  )
+
+  const executeCommand = useCallback(
+    async (
+      text: string,
+      options?: {
+        clearSelection?: boolean
+        toastTitle?: string
+        instantTravel?: boolean
+        skipBusyGuard?: boolean
+      },
+    ) => {
+      const trimmed = text.trim()
+      if (!trimmed || walkAnimation) return
+      if (!options?.skipBusyGuard && busyRef.current) return
+
+      busyRef.current = true
+      setBusy(true)
+      setError(null)
+      setConsequenceBeat(null)
+      try {
+        const res = await postCommand(trimmed)
+        applyCommandResult(res, { toastTitle: options?.toastTitle })
+        if (options?.clearSelection !== false) setSelection(null)
+
+        const state = await fetchState()
+        setShell(state.gameShell)
+
+        const animation = res.result?.walkAnimation ?? null
+        if (animation?.waypoints?.length && !options?.instantTravel) {
+          setWalkAnimation(animation)
+          setPendingVisualCues(state.visualCues ?? null)
+          setPendingDistrictView(state.districtView ?? null)
+          if (!state.visualCues?.interior) setInteriorOpen(false)
+        } else {
+          setWalkAnimation(null)
+          setPendingVisualCues(null)
+          setPendingDistrictView(null)
+          setVisualCues(state.visualCues ?? null)
+          setDistrictView(state.districtView ?? null)
+          if (!state.visualCues?.interior) setInteriorOpen(false)
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Command failed'
+        setError(message)
+        if (options?.toastTitle) {
+          showToast({ title: options?.toastTitle, message, tone: 'error' })
+        }
+      } finally {
+        busyRef.current = false
+        setBusy(false)
+      }
+    },
+    [applyCommandResult, showToast, walkAnimation],
+  )
+
+  const runCommand = useCallback(
+    async (
+      text: string,
+      options?: { clearSelection?: boolean; toastTitle?: string; instantTravel?: boolean },
+    ) => {
+      const trimmed = text.trim()
+      if (!trimmed || busyRef.current || walkAnimation) return
+
+      const decision = matchMajorDecision(trimmed, shell?.majorDecisions ?? [])
+      if (decision?.branchSuggested) {
+        setPendingDecision({ decision, command: trimmed })
+        return
+      }
+
+      await executeCommand(trimmed, options)
+    },
+    [executeCommand, shell?.majorDecisions, walkAnimation],
+  )
+
+  const branchAndContinue = async () => {
+    if (!pendingDecision) return
+    const { command: cmd, decision } = pendingDecision
+    setPendingDecision(null)
+    setError(null)
+    try {
+      const save = await postSave({ note: `Before: ${cmd}` })
+      if (save.snapshotId) {
+        await postBranch({
+          name: `before-${decision.id}`,
+          snapshotId: save.snapshotId,
+          note: decision.label,
+        })
+      }
+      await executeCommand(cmd, { skipBusyGuard: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Command failed')
-    } finally {
-      setBusy(false)
+      setError(err instanceof Error ? err.message : 'Branch failed')
     }
   }
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    void runCommand(command)
-    setCommand('')
+  const continueWithoutBranch = () => {
+    if (!pendingDecision) return
+    const { command: cmd } = pendingDecision
+    setPendingDecision(null)
+    void executeCommand(cmd)
+  }
+
+  const onWalkComplete = useCallback(() => {
+    setWalkAnimation(null)
+    if (pendingVisualCues) {
+      setVisualCues(pendingVisualCues)
+      setPendingVisualCues(null)
+    }
+    if (pendingDistrictView) {
+      setDistrictView(pendingDistrictView)
+      setPendingDistrictView(null)
+    }
+  }, [pendingDistrictView, pendingVisualCues])
+
+  const { progress: walkProgress, isWalking: mapWalking } = useDistrictWalkAnimation(walkAnimation)
+
+  const openNpcFromSelection = useCallback(
+    (sel: Selection) => {
+      if (sel.kind !== 'agent') return
+      const npc = shell?.npcCards?.find((n) => n.id === sel.id)
+      if (npc) setSelectedNpc(npc)
+    },
+    [shell?.npcCards],
+  )
+
+  const handleTravel = useCallback(
+    (sel: Selection) => {
+      if (sel.kind !== 'location') return
+      setSelection(enrichSelection(sel, shell))
+      void runCommand(sel.command, { clearSelection: true, toastTitle: `Travel · ${sel.label}` })
+    },
+    [runCommand, shell],
+  )
+
+  const handleMapTravel = useCallback(
+    (nodeId: string) => {
+      if (!nodeId || busy || walkAnimation) return
+      if (nodeId === districtView?.playerLocationId) return
+      void runCommand(`move ${nodeId}`, { clearSelection: true, toastTitle: `Travel · ${nodeId}` })
+    },
+    [busy, districtView?.playerLocationId, runCommand, walkAnimation],
+  )
+
+  const handleWASDEnterLocation = useCallback(
+    (locationId: string) => {
+      if (!locationId || busy || walkAnimation) return
+      if (locationId === districtView?.playerLocationId) return
+      const label =
+        visualCues?.locations.find((l) => l.id === locationId)?.label ?? locationId
+      void runCommand(`move ${locationId}`, {
+        clearSelection: true,
+        instantTravel: true,
+        toastTitle: `Arrived · ${label}`,
+      })
+    },
+    [busy, districtView?.playerLocationId, runCommand, visualCues?.locations, walkAnimation],
+  )
+
+  const handleSelect = useCallback(
+    (raw: Selection) => {
+      const enriched = enrichSelection(raw, shell)
+      setSelection(enriched)
+      if (enriched.kind === 'agent') openNpcFromSelection(enriched)
+    },
+    [openNpcFromSelection, shell],
+  )
+
+  const handleHotspotInspect = useCallback(
+    (raw: Selection) => {
+      if (raw.kind !== 'hotspot') return
+      const enriched = enrichSelection(raw, shell)
+      if (enriched.kind !== 'hotspot') return
+      setSelection(enriched)
+      void runCommand(enriched.command, {
+        clearSelection: false,
+        toastTitle: `Inspect · ${enriched.label}`,
+      })
+    },
+    [runCommand, shell],
+  )
+
+  const dismissHowTo = () => {
+    dismissHowToPlay()
+    setHowToOpen(false)
+  }
+
+  const toggleDock = () => {
+    setDockOpen((open) => {
+      if (!open) setDockTab('quest')
+      return !open
+    })
   }
 
   if (phase === 'loading') {
     return (
-      <div className="min-h-screen bg-void text-text flex items-center justify-center">
-        <p className="font-mono text-sm text-cyan-glow animate-pulse">Loading 3D district…</p>
-      </div>
+      <PlayBrandFrame variant="game">
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="font-mono text-sm text-cyan-glow animate-pulse">Loading 3D district…</p>
+        </div>
+      </PlayBrandFrame>
     )
   }
 
-  if (phase === 'offline' || !visualCues) return <PlayOfflineFallback />
+  if (phase === 'offline' || !visualCues) {
+    return (
+      <PlayBrandFrame variant="game">
+        <PlayOfflineFallback />
+      </PlayBrandFrame>
+    )
+  }
 
-  const topbar = shell?.topbar ?? {}
-  const walkEye = (visualCues.camera?.walkEye ?? [0, 1.65, 4.5]) as [number, number, number]
-  const walkTarget = (visualCues.camera?.walkTarget ?? visualCues.camera?.target ?? [0, 1.4, 0]) as [
-    number,
-    number,
-    number,
-  ]
   const orbitTarget = (visualCues.camera?.target ?? [0, 1.5, 0]) as [number, number, number]
+  const isWalking = walkAnimation !== null
+  const mapPlayerLoc = mapWalking
+    ? (walkAnimation?.from ?? walkAnimation?.fromLocationId ?? districtView?.playerLocationId)
+    : districtView?.playerLocationId
+
+  const selectionDetail =
+    selection && (selection.kind === 'hotspot' || selection.kind === 'agent')
+      ? selection.preview ?? selection.description
+      : selection?.description
 
   return (
-    <div className="h-screen w-screen bg-void text-text flex flex-col overflow-hidden">
-      <header className="shrink-0 border-b border-border/50 bg-void/90 backdrop-blur-xl z-10 px-4 h-12 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 font-mono text-xs">
-          <a href="/" className="text-muted hover:text-cyan-glow">← {PRODUCT.name}</a>
-          <a href="/play" className="text-cyan/80 hover:text-cyan-glow">2D</a>
-          <span className="text-amber-glow font-semibold">3D</span>
-          <button
-            type="button"
-            onClick={() => setCameraMode((m) => (m === 'walk' ? 'orbit' : 'walk'))}
-            className="text-[10px] px-2 py-0.5 rounded border border-border text-muted hover:text-cyan-glow"
-          >
-            {cameraMode === 'walk' ? 'Orbit cam' : 'Walk cam'}
-          </button>
-        </div>
-        <div className="flex gap-3 font-mono text-[11px] text-muted">
-          {health?.version && <span>{health.version}</span>}
-          <span>Day {topbar.day ?? '—'}</span>
-          <span>¢ {topbar.money ?? 0}</span>
-          <span>@ {shell?.location?.name ?? '—'}</span>
-        </div>
-      </header>
-
-      <div className="flex-1 relative min-h-0">
+    <PlayBrandFrame variant="game">
+      {pendingDecision && (
+        <MajorDecisionModal
+          decision={pendingDecision.decision}
+          command={pendingDecision.command}
+          busy={busy}
+          onBranchAndContinue={() => void branchAndContinue()}
+          onContinueWithout={continueWithoutBranch}
+          onCancel={() => setPendingDecision(null)}
+        />
+      )}
+      <NpcInteractionDrawer
+        npc={selectedNpc}
+        busy={busy}
+        onClose={() => setSelectedNpc(null)}
+        onCommand={(cmd) => void runCommand(cmd)}
+      />
+      <PlayGameHud
+        health={health}
+        shell={shell}
+        visualCues={visualCues}
+        districtView={districtView}
+        selection={selection}
+        selectionDetail={selectionDetail}
+        output={output}
+        consequenceBeat={consequenceBeat}
+        error={error}
+        busy={busy}
+        cameraMode={cameraMode}
+        interiorOpen={interiorOpen}
+        isWalking={isWalking}
+        walkAnimation={walkAnimation}
+        walkProgress={walkProgress}
+        mapWalking={mapWalking}
+        mapPlayerLoc={mapPlayerLoc ?? undefined}
+        mapCollapsed={mapCollapsed}
+        questExpanded={questExpanded}
+        dockOpen={dockOpen}
+        dockTab={dockTab}
+        onToggleCamera={() => setCameraMode((m) => (m === 'follow' ? 'overview' : 'follow'))}
+        onToggleInterior={() => setInteriorOpen((o) => !o)}
+        onToggleMap={() => setMapCollapsed((c) => !c)}
+        onToggleQuest={() => {
+          setQuestExpanded((e) => !e)
+          setDockOpen(true)
+          setDockTab('quest')
+        }}
+        onToggleDock={toggleDock}
+        onDockTab={setDockTab}
+        onCloseDock={() => setDockOpen(false)}
+        onOpenHelp={() => setHowToOpen(true)}
+        onOpenLeno={() => {
+          setDockOpen(true)
+          setDockTab('leno')
+        }}
+        onMapTravel={handleMapTravel}
+        onRunCommand={(cmd, opts) => void runCommand(cmd, opts)}
+        onSubmitCommand={(cmd) => void runCommand(cmd)}
+        onSelectNpc={setSelectedNpc}
+        onOpenNpcProfile={() => selection && openNpcFromSelection(selection)}
+        overlay={
+          <>
+            <HowToPlay3DOverlay open={howToOpen} onDismiss={dismissHowTo} />
+            <PlayFeedbackToast toast={toast} onDismiss={() => setToast(null)} />
+            {interiorOpen && visualCues.interior && (
+              <InteriorOverlay
+                interior={visualCues.interior}
+                busy={busy}
+                onCommand={(cmd) => void runCommand(cmd)}
+                onClose={() => setInteriorOpen(false)}
+              />
+            )}
+          </>
+        }
+      >
         <Suspense
           fallback={
             <div className="absolute inset-0 flex items-center justify-center font-mono text-sm text-cyan-glow">
@@ -133,73 +433,16 @@ export function WorldMindPlay3D() {
           <Play3DCanvas
             visualCues={visualCues}
             cameraMode={cameraMode}
-            walkEye={walkEye}
-            walkTarget={walkTarget}
             orbitTarget={orbitTarget}
-            onSelect={setSelection}
+            walkAnimation={walkAnimation}
+            onWalkComplete={onWalkComplete}
+            onSelect={handleSelect}
+            onTravel={handleTravel}
+            onHotspotInspect={handleHotspotInspect}
+            onEnterLocation={handleWASDEnterLocation}
           />
         </Suspense>
-
-        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[400px] pointer-events-none">
-          <div className="pointer-events-auto rounded-xl border border-border/70 bg-void/90 backdrop-blur-xl p-4 shadow-2xl">
-            <h2 className="font-display text-sm text-text-bright mb-1">
-              {selection?.label ?? 'Explore the district'}
-            </h2>
-            <p className="text-xs text-muted mb-3">
-              {cameraMode === 'walk'
-                ? 'WASD move · drag to look · click hotspots & agents'
-                : 'Orbit · scroll zoom · click buildings to travel'}
-            </p>
-            {selection && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {selection.kind === 'location' && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void runCommand(selection.command)}
-                    className="font-mono text-xs px-3 py-1.5 rounded border border-cyan/35 text-cyan-glow bg-cyan/5"
-                  >
-                    Move here
-                  </button>
-                )}
-                {selection.kind === 'hotspot' && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void runCommand(selection.command)}
-                    className="font-mono text-xs px-3 py-1.5 rounded border border-amber/35 text-amber-glow bg-amber/5"
-                  >
-                    {selection.label}
-                  </button>
-                )}
-                {selection.kind === 'agent' && selection.commands && (
-                  <>
-                    <button type="button" disabled={busy} onClick={() => void runCommand(selection.commands!.talk)} className="font-mono text-xs px-3 py-1.5 rounded border border-cyan/35 text-cyan-glow bg-cyan/5">Talk</button>
-                    <button type="button" disabled={busy} onClick={() => void runCommand(selection.commands!.ask)} className="font-mono text-xs px-3 py-1.5 rounded border border-cyan/35 text-cyan-glow bg-cyan/5">Ask</button>
-                    <button type="button" disabled={busy} onClick={() => void runCommand(selection.commands!.pay)} className="font-mono text-xs px-3 py-1.5 rounded border border-cyan/35 text-cyan-glow bg-cyan/5">Pay</button>
-                    <button type="button" disabled={busy} onClick={() => void runCommand(selection.commands!.leno)} className="font-mono text-xs px-3 py-1.5 rounded border border-cyan/35 text-cyan-glow bg-cyan/5">Leno</button>
-                  </>
-                )}
-              </div>
-            )}
-            <form onSubmit={onSubmit} className="flex gap-2">
-              <input
-                value={command}
-                onChange={(e) => setCommand(e.target.value)}
-                disabled={busy}
-                placeholder="inspect cafe cafe_delivery_crate"
-                className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-xs text-cyan-glow"
-              />
-              <button type="submit" disabled={busy} className="px-4 py-2 rounded text-xs font-semibold bg-amber text-void">
-                Run
-              </button>
-            </form>
-            {error && <p className="mt-2 text-xs text-amber-glow">{error}</p>}
-            <ConsequencePanel beat={consequenceBeat} />
-            {output && <p className="mt-2 text-xs text-text whitespace-pre-wrap">{output}</p>}
-          </div>
-        </div>
-      </div>
-    </div>
+      </PlayGameHud>
+    </PlayBrandFrame>
   )
 }

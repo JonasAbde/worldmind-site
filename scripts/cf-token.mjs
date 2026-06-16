@@ -4,7 +4,7 @@ import path from 'node:path'
 
 export const ACCOUNT_ID = '1cd2e6c70a2918567a3edcf8eadd7458'
 export const PROJECT_NAME = 'worldmind-site'
-export const BUILD_COMMAND = 'npm ci && npm run lint && npm run build'
+export const BUILD_COMMAND = 'npm ci && npm run lint && npm test && npm run build'
 
 export function getCloudflareToken() {
   if (process.env.CLOUDFLARE_API_TOKEN) return process.env.CLOUDFLARE_API_TOKEN

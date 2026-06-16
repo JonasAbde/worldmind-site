@@ -1,11 +1,16 @@
 function resolveCoreUrl(): string {
   const configured = import.meta.env.VITE_WORLDMIND_CORE_URL
   if (configured) return configured.replace(/\/$/, '')
-  if (import.meta.env.DEV) return 'http://127.0.0.1:8080'
+  // Same-origin: Vite dev + production Worker proxy /api and /assets/{locations,characters,models,audio,...}.
   return ''
 }
 
 export const CORE_URL = resolveCoreUrl()
+
+export interface HotspotOverlayPosition {
+  x: number
+  y: number
+}
 
 export interface GameShellHotspot {
   id: string
@@ -16,6 +21,7 @@ export interface GameShellHotspot {
   risk?: number
   possibleEvidence?: string[]
   icon?: string | null
+  overlayPosition?: HotspotOverlayPosition | null
 }
 
 export interface GameShellLocation {
@@ -42,9 +48,48 @@ export interface FounderContract {
   label: string
   customer?: string
   payout?: number
+  upfrontCost?: number
+  reputationGain?: number
+  minBaseLevel?: number
+  tierLabel?: string
+  tierRequired?: number
   status?: 'locked' | 'available' | 'active'
   locked?: boolean
+  isDelivery?: boolean
   reward?: string
+}
+
+export interface FounderActiveContract {
+  id?: string | null
+  templateId?: string | null
+  label?: string
+  customer?: string | null
+  payout?: number | null
+  upfrontCost?: number
+  reputationGain?: number | null
+  status?: string
+  deliveryStage?: 'idle' | 'ready_to_deliver' | string
+}
+
+export interface FounderDeliveryMilestone {
+  id: string
+  label: string
+  level?: number
+  contractsRequired?: number
+  reached?: boolean
+  current?: boolean
+  done?: boolean
+}
+
+export interface FounderDeliveryProgress {
+  contractsCompleted?: number
+  baseLevel?: number
+  nextTierLabel?: string | null
+  contractsToNextTier?: number
+  hasActiveDelivery?: boolean
+  activeTemplateId?: string | null
+  tierMilestones?: FounderDeliveryMilestone[]
+  workflowSteps?: FounderDeliveryMilestone[]
 }
 
 export interface GameShellFounder {
@@ -52,11 +97,13 @@ export interface GameShellFounder {
   baseLevel?: number
   tierLabel?: string
   contractsCompleted?: number
-  activeContract?: string | null
+  activeContract?: FounderActiveContract | null
   contracts: FounderContract[]
   reputation?: number
   money?: number
   unlockText?: string
+  deliveryProgress?: FounderDeliveryProgress | null
+  catalogSize?: number
 }
 
 export interface MajorDecision {
@@ -65,6 +112,12 @@ export interface MajorDecision {
   command?: string
   branchSuggested?: boolean
   requiredEvidence?: string[]
+  reason?: string
+}
+
+export interface LenoPayload {
+  summary?: string | null
+  suggestions?: string[]
 }
 
 export interface ConsequenceBeat {
@@ -73,11 +126,91 @@ export interface ConsequenceBeat {
   summary: string
 }
 
+export interface CaseBoardCard {
+  id: string
+  label: string
+  type?: string
+  inspectCommand?: string | null
+  truthLevel?: string
+  sourceRedacted?: boolean
+  traceCommand?: string
+  counterCommand?: string
+}
+
+export interface CaseBoard {
+  evidenceCards: CaseBoardCard[]
+  rumorCards: CaseBoardCard[]
+  suspectCards?: { id: string; label: string; status?: string }[]
+  links?: { from: string; to: string; relation?: string; redacted?: boolean }[]
+  unresolvedQuestions?: string[]
+}
+
+export interface RumorTrailEntry {
+  id: string
+  claim: string
+  truthLevel?: string
+  distortion?: string
+  spreadRisk?: string
+  trustConfidence?: string
+  traceState?: string
+  sourceRedacted?: boolean
+  sourceLabel?: string | null
+  backfireWarning?: boolean
+  traceCommand?: string
+  counterCommand?: string
+}
+
+export interface NpcCard {
+  id: string
+  name: string
+  role?: string
+  mood?: string
+  locationId?: string | null
+  locationName?: string
+  atPlayerLocation?: boolean
+  avatar?: string
+  portrait?: string
+  topics?: string[]
+  lockedTopics?: { topic: string; minTrust: number }[]
+  trust?: number
+  suspicion?: number
+  fear?: number
+  actions?: { label: string; command: string }[]
+}
+
+export interface QuestPathStep {
+  step: string
+  done: boolean
+}
+
+export interface QuestPath {
+  id: string
+  label: string
+  steps: QuestPathStep[]
+  progress?: number
+  complete?: boolean
+}
+
+export interface QuestProgress {
+  questId?: string
+  title?: string
+  objective?: string
+  incidentStatus?: string
+  resolvedPathId?: string | null
+  paths?: QuestPath[]
+}
+
 export interface VisualCuesAgent {
   id: string
   name: string
   role?: string
   position: number[]
+  portrait?: string | null
+  figureTexture?: string | null
+  fullBodyTexture?: string | null
+  modelUrl?: string | null
+  renderMode?: 'mesh3d' | 'sprite2d'
+  idleAnimation?: 'bob' | 'turn'
   commands: { talk: string; ask: string; pay: string; leno: string }
 }
 
@@ -92,6 +225,8 @@ export interface VisualCuesLocation {
   emissiveIntensity?: number
   command: string
   sceneTexture?: string | null
+  modelUrl?: string | null
+  renderMode?: 'mesh3d' | 'sprite2d'
   isPlayerHere?: boolean
   walkAnchor?: number[]
   interiorCamera?: { eye: number[]; target: number[] }
@@ -105,11 +240,54 @@ export interface VisualCuesEdge {
   toPosition?: number[]
 }
 
+export interface WalkGraphNode {
+  id: string
+  label?: string
+  position: number[]
+}
+
+export interface WalkGraph {
+  nodes: WalkGraphNode[]
+  edges: { from: string; to: string }[]
+}
+
+export interface WalkAnimation {
+  kind?: string
+  version?: number
+  fromLocationId?: string
+  toLocationId?: string
+  from?: string
+  to?: string
+  nodePath?: string[]
+  path?: string[]
+  waypoints: number[][]
+  cameraWaypoints?: number[][]
+  lookAt?: number[]
+  camera?: { eye?: number[]; target?: number[] }
+  durationMs: number
+}
+
+export interface VisualCuesInterior {
+  locationId: string
+  label?: string
+  sceneTexture?: string | null
+  hotspots?: { id: string; label: string; command: string; risk?: number; preview?: string | null }[]
+}
+
 export interface VisualCues {
   kind: string
   version: number
+  walkGraph?: WalkGraph
   playerLocationId?: string | null
-  player?: { position: number[]; locationId?: string | null } | null
+  interior?: VisualCuesInterior | null
+  player?: {
+    position: number[]
+    locationId?: string | null
+    figureTexture?: string | null
+    fullBodyTexture?: string | null
+    modelUrl?: string | null
+    renderMode?: 'mesh3d' | 'sprite2d'
+  } | null
   camera?: {
     target?: number[]
     distance?: number
@@ -126,25 +304,73 @@ export interface VisualCues {
     gridColor?: string
     ambientIntensity?: number
     sunIntensity?: number
+    skyColor?: string
   }
   locations: VisualCuesLocation[]
-  hotspots: { id: string; label: string; command: string; risk?: number; icon?: string | null; position: number[] }[]
+  hotspots: {
+    id: string
+    label: string
+    command: string
+    risk?: number
+    preview?: string | null
+    description?: string | null
+    icon?: string | null
+    position: number[]
+  }[]
   edges?: VisualCuesEdge[]
+}
+
+export interface GameShellCapability {
+  id: string
+  label?: string
+  unlocked: boolean
+}
+
+export interface GameShellProgression {
+  level?: number
+  title?: string
+  xp?: number
+  nextLevelXp?: number | null
+  nextLevelAt?: number | null
+  xpToNext?: number
+  nextUnlock?: {
+    type?: string | null
+    level?: number | null
+    title?: string | null
+    label?: string | null
+    xpRequired?: number
+    capability?: GameShellCapability | null
+  } | null
+  capabilities?: GameShellCapability[]
+  badges?: string[]
+  districtInfluence?: number
 }
 
 export interface GameShell {
   topbar: GameShellTopbar
   location: GameShellLocation
   founder: GameShellFounder
-  npcCards?: unknown[]
-  caseBoard?: unknown
-  rumorTrail?: unknown[]
+  npcCards?: NpcCard[]
+  caseBoard?: CaseBoard
+  rumorTrail?: RumorTrailEntry[]
+  questProgress?: QuestProgress
+  progression?: GameShellProgression
+  leno?: { summary?: string | null; suggestions?: string[] }
+  assets?: {
+    lenoOverlay?: string
+    evidenceIcon?: string
+    rumorIcon?: string
+    incidentIcon?: string
+    commandButton?: string
+    founderAction?: string
+  }
   majorDecisions?: MajorDecision[]
 }
 
 export interface DistrictNode {
   id: string
-  label: string
+  label?: string
+  name?: string
   x: number
   y: number
 }
@@ -175,6 +401,11 @@ export interface StateResponse {
   playerSnapshot?: { money?: number; reputation?: number; energy?: number }
 }
 
+export interface AudioCue {
+  kind: string
+  path: string
+}
+
 export interface CommandResult {
   ok: boolean
   text?: string
@@ -183,12 +414,19 @@ export interface CommandResult {
     text?: string
     gameShell?: GameShell
     playerSnapshot?: { money?: number; reputation?: number; energy?: number }
-    leno?: { summary?: string }
-    majorDecisionPrompt?: MajorDecision
+    leno?: LenoPayload
+    majorDecisionPrompt?: MajorDecision & { reason?: string }
     consequence?: Record<string, unknown>
     consequenceBeat?: ConsequenceBeat
     dialogue?: { message?: string; evidenceIds?: string[] }
+    walkAnimation?: WalkAnimation | null
+    audioCues?: AudioCue[]
+    kind?: string
   }
+}
+
+export function isMoveCommand(text: string): boolean {
+  return /^move\s+\S+/i.test(text.trim())
 }
 
 function corePath(path: string) {
@@ -202,6 +440,100 @@ export function assetUrl(relativePath: string | null | undefined) {
   return `${CORE_URL}${normalized}`
 }
 
+function swapImageExt(path: string): string | null {
+  if (path.endsWith('.png')) return path.replace(/\.png$/, '.webp')
+  if (path.endsWith('.webp')) return path.replace(/\.webp$/, '.png')
+  return null
+}
+
+/** Strip UI sheet paths — 3D billboards need portrait art. */
+export function normalizeFigureTexture(figureTexture: string | null | undefined): string {
+  if (!figureTexture) return 'assets/characters/player/portrait.png'
+  if (/character-sheet|player-sheet/i.test(figureTexture)) {
+    const id = figureTexture.match(/assets\/characters\/([^/]+)/)?.[1] ?? 'player'
+    return `assets/characters/${id}/portrait.png`
+  }
+  return figureTexture
+}
+
+/** Ordered figure URLs for 3D billboards — png/webp alternates. */
+export function characterFigureTextureCandidates(figureTexture: string | null | undefined): string[] {
+  const normalized = normalizeFigureTexture(figureTexture)
+  const expanded: string[] = []
+  const primary = assetUrl(normalized)
+  if (primary) expanded.push(primary)
+  const alt = swapImageExt(normalized)
+  if (alt) {
+    const altUrl = assetUrl(alt)
+    if (altUrl && !expanded.includes(altUrl)) expanded.push(altUrl)
+  }
+  return expanded
+}
+
+/** Ordered scene texture URLs — png/webp alternates for 3D billboards. */
+export function locationSceneTextureCandidates(sceneTexture: string | null | undefined): string[] {
+  if (!sceneTexture) return []
+  const expanded: string[] = []
+  const primary = assetUrl(sceneTexture)
+  if (primary) expanded.push(primary)
+  const alt = swapImageExt(sceneTexture)
+  if (alt) {
+    const altUrl = assetUrl(alt)
+    if (altUrl && !expanded.includes(altUrl)) expanded.push(altUrl)
+  }
+  return expanded
+}
+
+/** Ordered portrait URLs for NPC cards — tries pack paths then png/webp alternates. */
+export function npcPortraitCandidates(npc: Pick<NpcCard, 'id' | 'portrait' | 'avatar'>): string[] {
+  const raw = [npc.portrait, npc.avatar].filter(Boolean) as string[]
+  const expanded: string[] = []
+  for (const path of raw) {
+    const url = assetUrl(path)
+    if (url) expanded.push(url)
+    const alt = swapImageExt(path)
+    if (alt) {
+      const altUrl = assetUrl(alt)
+      if (altUrl && !expanded.includes(altUrl)) expanded.push(altUrl)
+    }
+  }
+  if (!expanded.length && npc.id) {
+    for (const kind of ['portrait', 'avatar'] as const) {
+      for (const ext of ['png', 'webp'] as const) {
+        const url = assetUrl(`assets/characters/${npc.id}/${kind}.${ext}`)
+        if (url && !expanded.includes(url)) expanded.push(url)
+      }
+    }
+  }
+  return expanded
+}
+
+export function formatNextUnlock(
+  nextUnlock: GameShellProgression['nextUnlock'],
+): string | null {
+  if (!nextUnlock) return null
+  if (nextUnlock.title) return nextUnlock.title
+  if (nextUnlock.label) return nextUnlock.label
+  if (nextUnlock.capability?.label) return nextUnlock.capability.label
+  if (nextUnlock.type === 'level' && nextUnlock.level != null) {
+    return `Level ${nextUnlock.level}`
+  }
+  return null
+}
+
+export function progressionXpPercent(progression: GameShellProgression): number {
+  const xp = progression.xp ?? 0
+  const xpToNext = progression.xpToNext ?? 0
+  const nextAt = progression.nextLevelAt
+  if (xpToNext > 0 && nextAt != null) {
+    const floor = nextAt - xpToNext
+    const span = nextAt - floor
+    if (span > 0) return Math.min(100, Math.round(((xp - floor) / span) * 100))
+  }
+  if (nextAt != null && nextAt > 0) return Math.min(100, Math.round((xp / nextAt) * 100))
+  return xp > 0 ? 100 : 0
+}
+
 export function founderContractCommand(
   contract: FounderContract,
   founder: GameShellFounder,
@@ -212,15 +544,7 @@ export function founderContractCommand(
   return null
 }
 
-export function matchMajorDecision(cmd: string, decisions: MajorDecision[] = []): MajorDecision | null {
-  const n = cmd.trim().toLowerCase()
-  if (!n) return null
-  for (const d of decisions) {
-    const dc = (d.command ?? '').trim().toLowerCase()
-    if (dc && (n === dc || n.startsWith(dc))) return d
-  }
-  return null
-}
+export { matchMajorDecision } from './major-decision'
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await fetch(corePath('/api/health'))

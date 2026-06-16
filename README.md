@@ -108,14 +108,20 @@ npm run cf:verify
 
 ### Production Play API (Worker proxy)
 
-The `worldmind-proxy` Worker routes `/api/*` and `/assets/locations/*` to the core play-server. Set Worker secret:
+The `worldmind-proxy` Worker routes `/api/*` and core play assets (`/assets/locations/*`, `/assets/characters/*`, `/assets/items/*`, `/assets/ui/*`, `/assets/showcase/*`) to the play-server. Site marketing assets remain on Pages.
+
+Set Worker secret:
 
 ```bash
 wrangler secret put WORLDMIND_CORE_ORIGIN -c wrangler.worker.toml
 # e.g. https://your-tunnel-or-vps-host (no trailing slash)
 ```
 
-Set Pages build env: `VITE_WORLDMIND_CORE_URL=https://worldmind.tekup.dk`
+**Recommended:** leave `VITE_WORLDMIND_CORE_URL` unset in Pages build env (same-origin via Worker).  
+Optional: `VITE_WORLDMIND_CORE_URL=https://worldmind.tekup.dk`
+
+Bridge health: `GET https://worldmind.tekup.dk/_worldmind/bridge-health`  
+Full checklist: `docs/60_WORLDMIND_SITE_PLAY_BRIDGE.md`
 
 
 `worldmind.tekup.dk` is routed by the `worldmind-proxy` Worker (`wrangler.worker.toml`). Cloudflare auto-provisions DNS and TLS on `tekup.dk` without Zone DNS API access.
@@ -140,7 +146,8 @@ Zero GitHub Actions minutes. Update the live build command: `npm run cf:build`.
 | `npm run cf:deploy` | Manual redeploy |
 | `npm run cf:build` | Sync lint into Cloudflare build config |
 | `npm run cf:cleanup-runs` | Delete old failed GitHub Actions runs |
-| `npm run cf:verify` | Full production health check (URLs + Cloudflare config) |
+| `npm run cf:verify` | Full production health check (alias) |
+| `npm run verify:production` | Production bridge + play API verification |
 | `npm run cf:migrate-domain` | Optional: Worker proxy → Pages-native domain (needs DNS token) |
 
 ## Project structure
