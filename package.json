@@ -23,6 +23,7 @@
     "cf:build": "node scripts/update-pages-build.mjs",
     "cf:migrate-domain": "node scripts/migrate-to-pages-domain.mjs",
     "cf:cleanup-runs": "node scripts/cleanup-github-runs.mjs",
+    "cf:verify": "node scripts/verify-production.mjs",
     "deploy:local": "npm run build && wrangler pages deploy dist --project-name=worldmind-site --commit-dirty=true",
     "deploy:worker": "wrangler deploy -c wrangler.worker.toml",
     "deploy": "node scripts/trigger-deployment.mjs worldmind-site"

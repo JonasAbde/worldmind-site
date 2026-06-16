@@ -7,6 +7,8 @@ Separate frontend project (`worldmind-site`). Does not modify the game engine re
 **Production:** https://worldmind.tekup.dk  
 **Pages preview:** https://worldmind-site.pages.dev
 
+Production status: **LIVE** — Git-connected Cloudflare Pages + Worker custom domain routing.
+
 ## Stack
 
 - Vite + React + TypeScript
@@ -74,24 +76,20 @@ Local emergency build + upload (bypasses Git; prefer `git push`):
 npm run deploy:local
 ```
 
-Check stack status:
+Check stack status and run full production verification:
 
 ```bash
 npm run cf:status
+npm run cf:verify
 ```
 
-### Custom domain
+### Custom domain (production routing)
 
-`worldmind.tekup.dk` is served by the `worldmind-proxy` Worker (`wrangler.worker.toml`). Cloudflare auto-creates DNS and TLS without Zone DNS API access.
+`worldmind.tekup.dk` is routed by the `worldmind-proxy` Worker (`wrangler.worker.toml`). Cloudflare auto-provisions DNS and TLS on `tekup.dk` without Zone DNS API access.
 
-To switch to Pages-native routing (optional):
+Pages hosts the build; the Worker forwards traffic to `worldmind-site.pages.dev`.
 
-```bash
-# Requires CLOUDFLARE_API_TOKEN with Zone DNS Edit
-$env:CLOUDFLARE_API_TOKEN="..."; npm run cf:migrate-domain
-```
-
-Or add CNAME `worldmind` → `worldmind-site.pages.dev` (proxied) manually, then `npm run cf:domain`.
+Optional later: switch to Pages-native domain with `npm run cf:migrate-domain` (requires `CLOUDFLARE_API_TOKEN` with Zone DNS Edit).
 
 ### CI/CD (Cloudflare Git — no GitHub Actions)
 
@@ -109,7 +107,8 @@ Zero GitHub Actions minutes. Update the live build command: `npm run cf:build`.
 | `npm run cf:deploy` | Manual redeploy |
 | `npm run cf:build` | Sync lint into Cloudflare build config |
 | `npm run cf:cleanup-runs` | Delete old failed GitHub Actions runs |
-| `npm run cf:migrate-domain` | Worker proxy → Pages-native domain (needs DNS token) |
+| `npm run cf:verify` | Full production health check (URLs + Cloudflare config) |
+| `npm run cf:migrate-domain` | Optional: Worker proxy → Pages-native domain (needs DNS token) |
 
 ## Project structure
 
