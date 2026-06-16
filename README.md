@@ -82,25 +82,42 @@ npm run cf:status
 
 ### Custom domain
 
-`worldmind.tekup.dk` is served by the `worldmind-proxy` Worker with `custom_domain = true` in `wrangler.toml`. Cloudflare auto-creates DNS and TLS — no manual CNAME required when using this path.
+`worldmind.tekup.dk` is served by the `worldmind-proxy` Worker (`wrangler.worker.toml`). Cloudflare auto-creates DNS and TLS without Zone DNS API access.
 
-If you prefer Pages-native custom domains instead, add a CNAME `worldmind` → `worldmind-site.pages.dev` (proxied) in **Cloudflare → tekup.dk → DNS**, or run `npm run cf:dns` with a token that has **Zone → DNS → Edit**.
+To switch to Pages-native routing (optional):
+
+```bash
+# Requires CLOUDFLARE_API_TOKEN with Zone DNS Edit
+$env:CLOUDFLARE_API_TOKEN="..."; npm run cf:migrate-domain
+```
+
+Or add CNAME `worldmind` → `worldmind-site.pages.dev` (proxied) manually, then `npm run cf:domain`.
 
 ### CI/CD (Cloudflare Git — no GitHub Actions)
 
-Pushes to `main` trigger **Cloudflare Pages** to run `npm ci && npm run build` and deploy production. This uses Cloudflare's build infrastructure — **zero GitHub Actions minutes**.
+Pushes to `main` trigger Cloudflare to run:
 
-GitHub Actions workflows were removed (billing lock). See `.github/workflows/README.md`.
+```bash
+npm ci && npm run lint && npm run build
+```
 
-One-time migration script (already applied): `npm run cf:git`
+Zero GitHub Actions minutes. Update the live build command: `npm run cf:build`.
+
+| Command | Purpose |
+|---------|---------|
+| `git push origin main` | Auto deploy |
+| `npm run cf:deploy` | Manual redeploy |
+| `npm run cf:build` | Sync lint into Cloudflare build config |
+| `npm run cf:cleanup-runs` | Delete old failed GitHub Actions runs |
+| `npm run cf:migrate-domain` | Worker proxy → Pages-native domain (needs DNS token) |
 
 ## Project structure
 
 ```txt
 src/           React app (sections, UI, product data)
 public/assets/ Cinematic landing assets (PNG source + optimized WebP)
-workers/       worldmind-proxy Worker (custom domain → Pages)
-scripts/       Asset optimization + Cloudflare helpers
-dist/          Production build output (deploy this)
-wrangler.toml  Worker config (worldmind.tekup.dk custom domain)
+workers/              worldmind-proxy Worker (custom domain → Pages)
+scripts/              Asset optimization + Cloudflare helpers
+dist/                 Production build output (deploy this)
+wrangler.worker.toml  Worker config (worldmind.tekup.dk custom domain)
 ```

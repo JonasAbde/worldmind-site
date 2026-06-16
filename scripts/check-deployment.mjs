@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 const ACCOUNT_ID = '1cd2e6c70a2918567a3edcf8eadd7458'
-const PROJECT = process.argv[2] ?? 'worldmind-site-git-test'
+const PROJECT = process.argv[2] ?? 'worldmind-site'
 
 function getToken() {
   const configPath = path.join(

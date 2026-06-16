@@ -1,51 +1,14 @@
-import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
+import { ACCOUNT_ID, BUILD_COMMAND, PROJECT_NAME, cfFetch } from './cf-token.mjs'
 
-const ACCOUNT_ID = '1cd2e6c70a2918567a3edcf8eadd7458'
-const PROJECT = 'worldmind-site'
 const REPO_OWNER = 'JonasAbde'
 const REPO_NAME = 'worldmind-site'
 const REPO_ID = '1271185997'
 const OWNER_ID = '147070826'
 
-function getToken() {
-  const configPath = path.join(
-    os.homedir(),
-    'AppData',
-    'Roaming',
-    'xdg.config',
-    '.wrangler',
-    'config',
-    'default.toml',
-  )
-  const raw = fs.readFileSync(configPath, 'utf8')
-  const match = raw.match(/oauth_token\s*=\s*"([^"]+)"/)
-  if (!match) throw new Error('Run npm run cf:login first')
-  return match[1]
-}
-
-async function cfFetch(token, url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
-  })
-  const data = await res.json()
-  if (!data.success) {
-    throw new Error(`${options.method ?? 'GET'} ${url}\n${JSON.stringify(data.errors ?? data, null, 2)}`)
-  }
-  return data
-}
-
-async function waitForDeployment(token, project, timeoutMs = 600_000) {
+async function waitForDeployment(project, timeoutMs = 600_000) {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
     const deployments = await cfFetch(
-      token,
       `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${project}/deployments?per_page=1`,
     )
     const dep = deployments.result?.[0]
@@ -62,15 +25,19 @@ async function waitForDeployment(token, project, timeoutMs = 600_000) {
   throw new Error('Timed out waiting for deployment')
 }
 
-async function main() {
-  const token = getToken()
+async function triggerMainDeploy(project) {
+  await cfFetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${project}/deployments`,
+    { method: 'POST', body: JSON.stringify({ branch: 'main' }) },
+  )
+}
 
-  console.log(`Migrating ${PROJECT} to Cloudflare Git integration (no GitHub Actions)...\n`)
+async function main() {
+  console.log(`Migrating ${PROJECT_NAME} to Cloudflare Git integration (no GitHub Actions)...\n`)
 
   try {
     await cfFetch(
-      token,
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT}`,
+      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT_NAME}`,
       { method: 'DELETE' },
     )
     console.log('Deleted direct-upload project.')
@@ -79,13 +46,13 @@ async function main() {
     console.log('No existing project to delete.')
   }
 
-  await cfFetch(token, `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects`, {
+  await cfFetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects`, {
     method: 'POST',
     body: JSON.stringify({
-      name: PROJECT,
+      name: PROJECT_NAME,
       production_branch: 'main',
       build_config: {
-        build_command: 'npm ci && npm run build',
+        build_command: BUILD_COMMAND,
         destination_dir: 'dist',
         root_dir: '',
       },
@@ -106,25 +73,12 @@ async function main() {
     }),
   })
   console.log('Created git-connected Pages project.')
+  console.log('Triggering initial deployment from main...')
+  await triggerMainDeploy(PROJECT_NAME)
+  console.log('Waiting for Cloudflare build...')
 
-  await new Promise((r) => setTimeout(r, 5000))
-  const deployments = await cfFetch(
-    token,
-    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT}/deployments?per_page=1`,
-  )
-  if (!deployments.result?.length) {
-    console.log('Triggering initial deployment from main...')
-    await cfFetch(
-      token,
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT}/deployments`,
-      { method: 'POST', body: JSON.stringify({ branch: 'main' }) },
-    )
-  }
-
-  console.log('Waiting for Cloudflare build from GitHub main...')
-
-  const dep = await waitForDeployment(token, PROJECT)
-  console.log(`\nProduction live: https://${PROJECT}.pages.dev`)
+  const dep = await waitForDeployment(PROJECT_NAME)
+  console.log(`\nProduction live: https://${PROJECT_NAME}.pages.dev`)
   console.log(`Deployment URL: ${dep.url}`)
   console.log('\nPushes to main now auto-deploy via Cloudflare (not GitHub Actions).')
 }

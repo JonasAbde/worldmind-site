@@ -1,13 +1,10 @@
 # CI/CD
 
-This repo deploys via **Cloudflare Pages Git integration** — not GitHub Actions.
+Deploys run on **Cloudflare Pages Git integration** — not GitHub Actions.
 
-Every push to `main` triggers a Cloudflare build (`npm ci && npm run build`) and production deploy automatically.
+| Event | What happens |
+|-------|----------------|
+| Push to `main` | Cloudflare runs `npm ci && npm run lint && npm run build` and deploys |
+| Manual | `npm run cf:deploy` |
 
-Manual fallback:
-
-```bash
-npm run deploy
-```
-
-Setup (one-time): `npm run cf:git`
+GitHub Actions was removed due to account billing lock. Clean up old failed runs with `npm run cf:cleanup-runs`.
