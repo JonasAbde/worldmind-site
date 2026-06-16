@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -13,6 +16,7 @@
     "cf:whoami": "wrangler whoami",
     "cf:init": "wrangler pages project create worldmind-site --production-branch=main",
     "cf:domain": "node scripts/add-pages-domain.mjs",
+    "cf:status": "node scripts/cloudflare-status.mjs",
     "deploy:cf": "npm run build && wrangler pages deploy dist --project-name=worldmind-site --commit-dirty=true"
   },
   "dependencies": {

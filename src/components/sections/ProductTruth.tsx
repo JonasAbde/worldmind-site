@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { PRODUCT_TRUTH } from '../../data/product'
+import { PRODUCT, PRODUCT_TRUTH } from '../../data/product'
 import { Section, SectionHeader } from '../ui/Section'
 
 function TruthRow({
@@ -42,7 +42,7 @@ export function ProductTruthSection() {
       <SectionHeader
         eyebrow="Product truth"
         title="What exists today — what comes later"
-        subtitle="Grounded in WorldMind v1.0-rc7. A living AI-world simulation prototype, not a finished commercial release."
+        subtitle={`Grounded in WorldMind ${PRODUCT.version}. A living AI-world simulation prototype, not a finished commercial release.`}
       />
 
       <div className="grid md:grid-cols-2 gap-6">

@@ -2,62 +2,84 @@
 
 Premium cinematic product landing + play portal for **WorldMind — Enter the Simulation**.
 
-This is a separate frontend project (`worldmind-site`) and does not modify the game engine repository.
+Separate frontend project (`worldmind-site`). Does not modify the game engine repository ([worldmind-core](https://github.com/JonasAbde/worldmind-core)).
+
+**Production:** https://worldmind.tekup.dk  
+**Pages preview:** https://worldmind-site.pages.dev
 
 ## Stack
 
-- Vite
-- React + TypeScript
-- Tailwind CSS (v4 via `@tailwindcss/vite`)
+- Vite + React + TypeScript
+- Tailwind CSS v4 (`@tailwindcss/vite`)
 - Framer Motion
+- Cloudflare Pages (static deploy)
 
-## Product truth covered
+## Product truth (aligned with worldmind-core)
 
-- WorldMind is a simulation-first AI game (not an NPC chatbot)
-- Current product baseline: **WorldMind v1.0-rc7**
-- New Aarhus District 01
-- The Missing Delivery vertical slice
-- 14 player commands
-- 3 resolution paths
-- Leno companion with evidence guard
-- Live Web Play UI, Save Browser, Branch Restore, Snapshot Diff
-- Event Log as source of truth
-- 188/188 tests passing in core repo
+- Simulation-first AI game — not an NPC chatbot
+- **WorldMind v1.0-rc8** · **200/200 tests** in core repo
+- New Aarhus District 01 · 10 agents · 4 locations
+- The Missing Delivery vertical slice · 14 player commands · 3 resolution paths
+- Leno companion with evidence guard · Save Browser · Branch Restore · Snapshot Diff
+- 2D district view + phone/Leno UI (8 tabs)
 
 ## Development
 
-Install dependencies:
-
 ```bash
 npm install
-```
-
-Run local dev server:
-
-```bash
-npm run dev
-```
-
-Build for production:
-
-```bash
+npm run dev          # http://localhost:5173
 npm run build
-```
-
-Preview the production build:
-
-```bash
+npm run lint
 npm run preview
 ```
 
-## Deploy
+## Assets
 
-The project outputs static assets to `dist/` and can be deployed on any static host (Vercel, Netlify, Cloudflare Pages, GitHub Pages, S3/CloudFront, etc.).
-
-Typical flow:
+Source PNGs live in `public/assets/`. Optimized WebP variants:
 
 ```bash
-npm run build
+npm run optimize:assets
 ```
 
-Then upload/publish the `dist/` folder to your host.
+## Deploy (Cloudflare Pages)
+
+One-time setup:
+
+```bash
+npm run cf:login
+npm run cf:init      # creates worldmind-site Pages project
+npm run cf:domain    # attaches worldmind.tekup.dk
+```
+
+Deploy production:
+
+```bash
+npm run deploy:cf
+```
+
+Check custom domain status:
+
+```bash
+node scripts/check-pages-domain.mjs
+```
+
+### CI/CD
+
+GitHub Actions runs on every push to `main`:
+
+- **CI:** lint + build
+- **Deploy:** build + `wrangler pages deploy` to Cloudflare Pages
+
+Required GitHub repository secrets:
+
+- `CLOUDFLARE_API_TOKEN` — API token with **Cloudflare Pages Edit**
+- `CLOUDFLARE_ACCOUNT_ID` — `1cd2e6c70a2918567a3edcf8eadd7458`
+
+## Project structure
+
+```txt
+src/           React app (sections, UI, product data)
+public/assets/ Cinematic landing assets (PNG source + optimized WebP)
+scripts/       Asset optimization + Cloudflare helpers
+dist/          Production build output (deploy this)
+```
