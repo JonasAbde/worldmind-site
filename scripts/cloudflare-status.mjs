@@ -70,6 +70,22 @@ async function main() {
     console.log(`  - ${dep.environment} | ${dep.url} | ${dep.latest_stage?.status ?? dep.stage}`)
   }
 
+  try {
+    const workerDomains = await cfFetch(
+      token,
+      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains`,
+    )
+    const host = workerDomains.result?.find((d) => d.hostname === CUSTOM_DOMAIN)
+    console.log('\nWorker custom domain (production routing):')
+    if (host) {
+      console.log(`  - ${host.hostname} → ${host.service} (enabled: ${host.enabled})`)
+    } else {
+      console.log(`  - ${CUSTOM_DOMAIN}: not attached (run npm run deploy:worker)`)
+    }
+  } catch {
+    console.log('\nWorker custom domain: (could not query)')
+  }
+
   const zones = await cfFetch(
     token,
     `https://api.cloudflare.com/client/v4/zones?name=${ZONE_NAME}`,

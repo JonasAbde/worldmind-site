@@ -43,60 +43,56 @@ npm run optimize:assets
 
 ## Deploy (Cloudflare Pages)
 
+Production uses two Cloudflare pieces:
+
+1. **Pages** hosts the static build at `worldmind-site.pages.dev`
+2. **Worker** (`worldmind-proxy`) maps `worldmind.tekup.dk` → Pages (auto-provisions DNS + SSL without Zone DNS API access)
+
 One-time setup:
 
 ```bash
 npm run cf:login
-npm run cf:init      # creates worldmind-site Pages project
-npm run cf:domain    # attaches worldmind.tekup.dk
+npm run cf:init          # creates worldmind-site Pages project
+npm run deploy:worker    # attaches worldmind.tekup.dk via Worker custom domain
 ```
 
-Deploy production:
+Deploy after code changes:
 
 ```bash
-npm run deploy:cf
+npm run deploy           # build + upload to Cloudflare Pages
 ```
 
-Check stack status (project, domains, deployments, DNS):
+The Worker proxy is already live; routine deploys only need `npm run deploy`.
+
+Check stack status:
 
 ```bash
 npm run cf:status
-npm run cf:dns       # create/fix CNAME when token has Zone DNS Edit
 ```
 
-### Custom domain DNS
+### Custom domain
 
-After `npm run cf:domain`, Cloudflare Pages expects a CNAME on `tekup.dk`:
+`worldmind.tekup.dk` is served by the `worldmind-proxy` Worker with `custom_domain = true` in `wrangler.toml`. Cloudflare auto-creates DNS and TLS — no manual CNAME required when using this path.
 
-| Type  | Name      | Target                  | Proxy   |
-|-------|-----------|-------------------------|---------|
-| CNAME | `worldmind` | `worldmind-site.pages.dev` | Proxied |
-
-Add it in **Cloudflare → tekup.dk → DNS**, or run `npm run cf:dns` with a token that includes **Zone → DNS → Edit** for `tekup.dk`. The wrangler OAuth token only has Zone read, so auto-provisioning may fail until DNS is added.
-
-Domain status flips from `pending` → `active` once the CNAME resolves and SSL provisions (usually a few minutes).
+If you prefer Pages-native custom domains instead, add a CNAME `worldmind` → `worldmind-site.pages.dev` (proxied) in **Cloudflare → tekup.dk → DNS**, or run `npm run cf:dns` with a token that has **Zone → DNS → Edit**.
 
 ### CI/CD
 
-GitHub Actions runs on every push to `main`:
+GitHub Actions workflows (`.github/workflows/`) run lint + build + deploy on push to `main`.
 
-- **CI:** lint + build
-- **Deploy:** build + `wrangler pages deploy` to Cloudflare Pages
+> **Billing block:** If workflows fail with “account is locked due to a billing issue”, fix billing at [GitHub Settings → Billing](https://github.com/settings/billing). Until then, deploy manually with `npm run deploy`.
 
-> **Note:** If workflows fail immediately with “account is locked due to a billing issue”, resolve billing at [GitHub Settings → Billing](https://github.com/settings/billing) before Actions can run.
+**Alternative (no GitHub Actions):** Connect the repo in [Cloudflare Workers & Pages](https://dash.cloudflare.com/) → `worldmind-site` → Settings → Builds → Connect to Git. Cloudflare builds and deploys on push without using GitHub Actions minutes.
 
-Required GitHub repository secrets (set via `node scripts/setup-github-secrets.mjs` or manually):
-
-- `CLOUDFLARE_API_TOKEN` — API token with **Account → Cloudflare Pages → Edit** (and **Zone → DNS → Edit** if you want DNS automation)
-- `CLOUDFLARE_ACCOUNT_ID` — `1cd2e6c70a2918567a3edcf8eadd7458`
-
-Prefer a dedicated [API token](https://dash.cloudflare.com/profile/api-tokens) over the wrangler OAuth token for CI — OAuth tokens expire and lack DNS write.
+Required GitHub secrets (for Actions): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. Set via `node scripts/setup-github-secrets.mjs` or manually. Prefer a dedicated [API token](https://dash.cloudflare.com/profile/api-tokens) over the wrangler OAuth token.
 
 ## Project structure
 
 ```txt
 src/           React app (sections, UI, product data)
 public/assets/ Cinematic landing assets (PNG source + optimized WebP)
+workers/       worldmind-proxy Worker (custom domain → Pages)
 scripts/       Asset optimization + Cloudflare helpers
 dist/          Production build output (deploy this)
+wrangler.toml  Worker config (worldmind.tekup.dk custom domain)
 ```

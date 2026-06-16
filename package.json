@@ -18,7 +18,9 @@
     "cf:domain": "node scripts/add-pages-domain.mjs",
     "cf:status": "node scripts/cloudflare-status.mjs",
     "cf:dns": "node scripts/fix-pages-dns.mjs",
-    "deploy:cf": "npm run build && wrangler pages deploy dist --project-name=worldmind-site --commit-dirty=true"
+    "deploy:cf": "npm run build && wrangler pages deploy dist --project-name=worldmind-site --commit-dirty=true",
+    "deploy:worker": "wrangler deploy",
+    "deploy": "npm run deploy:cf"
   },
   "dependencies": {
     "framer-motion": "^12.40.0",

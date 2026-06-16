@@ -1,0 +1,8 @@
+name = "worldmind-proxy"
+main = "workers/worldmind-proxy.js"
+compatibility_date = "2026-06-16"
+workers_dev = false
+
+[[routes]]
+pattern = "worldmind.tekup.dk"
+custom_domain = true
