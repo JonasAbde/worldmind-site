@@ -95,7 +95,8 @@ export function MissingDelivery() {
           title="Missing Delivery — Event Log"
           label="District incident"
           variant="saves"
-          imageSrc="/assets/missing-delivery-case-board.png"
+          imageSrc="/assets/optimized/missing-delivery-case-board.webp"
+          imageFallbackSrc="/assets/missing-delivery-case-board.png"
           imageAlt="WorldMind missing delivery investigation board showing connected claims, witnesses and delivery evidence"
         >
           <LiveEventFeed />

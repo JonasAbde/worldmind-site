@@ -40,11 +40,11 @@ export function District() {
       {/* Hero image */}
       <div className="relative rounded-2xl overflow-hidden border border-border/50 mb-10 aspect-[21/9]">
         <img
-          src="/assets/new-aarhus-district-01.png"
+          src="/assets/optimized/new-aarhus-district-01.webp"
           alt="WorldMind district environment art showing New Aarhus District 01 as a lived simulation space"
           loading="lazy"
           className="w-full h-full object-cover"
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          onError={(e) => { e.currentTarget.src = '/assets/new-aarhus-district-01.png' }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-void/80 via-void/20 to-transparent" />
         <div className="absolute bottom-5 left-6">

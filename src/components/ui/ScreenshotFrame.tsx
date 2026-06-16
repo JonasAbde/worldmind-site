@@ -8,6 +8,7 @@ interface ScreenshotFrameProps {
   title: string
   label: string
   imageSrc?: string
+  imageFallbackSrc?: string
   imageAlt?: string
   variant?: ScreenshotVariant
   children?: ReactNode
@@ -31,12 +32,21 @@ export function ScreenshotFrame({
   title,
   label,
   imageSrc,
+  imageFallbackSrc,
   imageAlt,
   variant = 'web-play',
   children,
 }: ScreenshotFrameProps) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const showImage = Boolean(imageSrc) && !imageFailed
+  const [resolvedSrc, setResolvedSrc] = useState(imageSrc)
+  const showImage = Boolean(resolvedSrc)
+
+  function handleImageError() {
+    if (resolvedSrc === imageSrc && imageFallbackSrc) {
+      setResolvedSrc(imageFallbackSrc)
+      return
+    }
+    setResolvedSrc(undefined)
+  }
 
   return (
     <motion.div
@@ -67,11 +77,11 @@ export function ScreenshotFrame({
       <div className="relative">
         {showImage ? (
           <img
-            src={imageSrc}
+            src={resolvedSrc}
             alt={imageAlt ?? title}
             loading="lazy"
             className="w-full max-h-[420px] object-cover object-top"
-            onError={() => setImageFailed(true)}
+            onError={handleImageError}
           />
         ) : (
           <div className="p-5 min-h-[180px] flex items-center justify-center text-xs text-muted">
@@ -96,7 +106,8 @@ export const LiveWebPlayScreenshot = () => (
     title="Live Web Play UI — NPC portrait panel"
     label="rc8 generated"
     variant="web-play"
-    imageSrc="/assets/npc-agent-portrait-set.png"
+    imageSrc="/assets/optimized/npc-agent-portrait-set.webp"
+    imageFallbackSrc="/assets/npc-agent-portrait-set.png"
     imageAlt="WorldMind multi-agent portrait panel representing 10 active NPC personalities in the live simulation UI"
   />
 )
@@ -106,7 +117,8 @@ export const SaveBrowserScreenshot = () => (
     title="Save Browser — snapshot diff"
     label="Inspect and diff saves"
     variant="saves"
-    imageSrc="/assets/save-browser-snapshot-diff.png"
+    imageSrc="/assets/optimized/save-browser-snapshot-diff.webp"
+    imageFallbackSrc="/assets/save-browser-snapshot-diff.png"
     imageAlt="WorldMind save browser visual showing timeline snapshot comparison and restore workflow"
   />
 )
@@ -116,7 +128,8 @@ export const TimelineBranchesScreenshot = () => (
     title="Timeline Branches"
     label="Branch & compare worlds"
     variant="timeline"
-    imageSrc="/assets/timeline-branches.png"
+    imageSrc="/assets/optimized/timeline-branches.webp"
+    imageFallbackSrc="/assets/timeline-branches.png"
     imageAlt="WorldMind timeline branching visual showing save, restore and snapshot diff concepts"
   />
 )
@@ -126,7 +139,8 @@ export const LenoEvidenceScreenshot = () => (
     title="Leno Evidence Guard"
     label="Evidence-gated answers"
     variant="leno"
-    imageSrc="/assets/leno-evidence-guard.png"
+    imageSrc="/assets/optimized/leno-evidence-guard.webp"
+    imageFallbackSrc="/assets/leno-evidence-guard.png"
     imageAlt="WorldMind Leno evidence guard visual showing redacted hidden truth and known evidence"
   />
 )

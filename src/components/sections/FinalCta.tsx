@@ -16,11 +16,11 @@ export function FinalCta() {
         {/* Key art bg */}
         <div className="relative rounded-2xl border border-cyan/15 overflow-hidden">
           <img
-            src="/assets/worldmind-hero-key-art.png"
+            src="/assets/optimized/worldmind-hero-key-art.webp"
             alt=""
             aria-hidden
             className="absolute inset-0 w-full h-full object-cover opacity-20"
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            onError={(e) => { e.currentTarget.src = '/assets/worldmind-hero-key-art.png' }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-void/70 via-void/50 to-void/90" />
           <div className="absolute inset-0 grid-pattern opacity-30" />

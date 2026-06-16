@@ -83,12 +83,12 @@ export function Hero() {
         style={{ y: imgY, scale: imgScale }}
       >
         <img
-          src="/assets/worldmind-hero-key-art.png"
+          src="/assets/optimized/worldmind-hero-key-art.webp"
           alt="Cinematic key art for WorldMind showing New Aarhus District 01 with simulation overlays"
           className="w-full h-full object-cover"
           fetchPriority="high"
           decoding="async"
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          onError={(e) => { e.currentTarget.src = '/assets/worldmind-hero-key-art.png' }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-void/55 via-void/30 to-void" />
         <div className="absolute inset-0 bg-gradient-to-r from-void/60 via-transparent to-void/60" />

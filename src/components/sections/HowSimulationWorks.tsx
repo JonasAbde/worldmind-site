@@ -43,11 +43,11 @@ function DistrictMiniMap() {
       </div>
       <div className="relative p-4">
         <img
-          src="/assets/new-aarhus-district-01.png"
+          src="/assets/optimized/new-aarhus-district-01.webp"
           alt="WorldMind district environment art showing New Aarhus District 01"
           loading="lazy"
           className="w-full max-h-[220px] object-cover rounded-lg opacity-40"
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          onError={(e) => { e.currentTarget.src = '/assets/new-aarhus-district-01.png' }}
         />
         {/* SVG overlay matching core district-view.js coordinates */}
         <svg
