@@ -101,7 +101,7 @@ export function collidesWithBuildings(px: number, pz: number, buildings: Buildin
 
 /** Street spawn offset just outside the building collision shell. */
 export function streetOffsetForLocation(loc: VisualCuesLocation | undefined): number {
-  if (!loc) return 2.85
+  if (!loc) return 2.7
   const collision = resolveLocationCollision(loc)
   return Math.max(collision.halfExtents[0], collision.halfExtents[1]) + 0.55
 }

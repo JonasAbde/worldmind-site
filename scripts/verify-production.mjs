@@ -61,17 +61,48 @@ async function verifyApiHealth() {
 async function verifyStateVisualCues() {
   const { res, json } = await fetchJson('/api/state')
   const visualCues = json?.visualCues
+  const nodeCount = Object.keys(visualCues?.walkGraph?.nodes ?? {}).length
+  const edgeCount = visualCues?.walkGraph?.edges?.length ?? 0
   const ok =
     res.status === 200 &&
     json?.ok === true &&
-    visualCues?.kind &&
+    visualCues?.kind === 'worldmind_3d_visual_cues' &&
+    visualCues?.version === 4 &&
     Array.isArray(visualCues.locations) &&
-    visualCues.locations.length > 0
+    visualCues.locations.length >= 4 &&
+    nodeCount >= 4 &&
+    edgeCount >= 3 &&
+    visualCues?.interior?.locationId &&
+    Array.isArray(visualCues?.interior?.hotspots) &&
+    Array.isArray(visualCues?.hotspots)
   record(
-    'GET /api/state visualCues',
+    'GET /api/state visualCues v4',
     ok,
-    ok ? `${visualCues.locations.length} locations` : `status ${res.status}`,
+    ok
+      ? `v${visualCues.version}, ${visualCues.locations.length} locations, ${nodeCount} walk nodes`
+      : `status ${res.status}`,
   )
+
+  const withCollision = (visualCues?.locations ?? []).filter(
+    (l) => l?.collision?.halfExtents && l?.collision?.radius > 0,
+  )
+  const collisionOk = withCollision.length === 0 || withCollision.length >= 4
+  record(
+    'visualCues collision footprints',
+    collisionOk,
+    collisionOk ? `${withCollision.length} locations` : 'missing collision on district buildings',
+  )
+
+  const withModels = (visualCues?.locations ?? []).filter((l) => l?.modelUrl)
+  const meshOk =
+    withModels.length === 0 ||
+    (withModels.length >= 4 && withModels.every((l) => l.renderMode === 'mesh3d'))
+  record(
+    'visualCues mesh3d modelUrl',
+    meshOk,
+    meshOk ? `${withModels.length} GLB locations` : 'mesh3d/modelUrl mismatch',
+  )
+
   return { ok, visualCues }
 }
 
@@ -91,7 +122,7 @@ async function verifyMoveWalkAnimation() {
   record(
     'POST /api/command move walkAnimation',
     ok,
-    ok ? `${animation.waypoints.length} waypoints` : `status ${res.status}`,
+    ok ? `${animation.waypoints.length} waypoints, ${animation.durationMs ?? '?'}ms` : `status ${res.status}`,
   )
 }
 
@@ -143,12 +174,14 @@ async function verifyCloudflareConfig() {
     const pagesOk = stage === 'success' || stage === 'active'
     const gitOk = project.result.source?.type === 'github'
     const workerOk = worker?.enabled === true
-    const buildOk = project.result.build_config?.build_command?.includes('npm run lint')
+    const buildOk =
+      project.result.build_config?.build_command?.includes('npm run lint') &&
+      project.result.build_config?.build_command?.includes('npm test')
 
     record('Pages deploy', pagesOk, latest?.url ?? 'n/a')
     record('Git source', gitOk)
     record('Worker domain', workerOk, new URL(BASE).hostname)
-    record('Lint in build', buildOk)
+    record('Lint + test in build', buildOk)
   } catch (err) {
     record('Cloudflare API', false, err instanceof Error ? err.message : String(err))
   }
