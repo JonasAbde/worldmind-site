@@ -91,6 +91,10 @@ export interface VisualCuesLocation {
   emissive?: string
   emissiveIntensity?: number
   command: string
+  sceneTexture?: string | null
+  isPlayerHere?: boolean
+  walkAnchor?: number[]
+  interiorCamera?: { eye: number[]; target: number[] }
   agents?: VisualCuesAgent[]
 }
 
@@ -105,7 +109,15 @@ export interface VisualCues {
   kind: string
   version: number
   playerLocationId?: string | null
-  camera?: { target?: number[]; distance?: number }
+  player?: { position: number[]; locationId?: string | null } | null
+  camera?: {
+    target?: number[]
+    distance?: number
+    minDistance?: number
+    maxDistance?: number
+    walkEye?: number[]
+    walkTarget?: number[]
+  }
   environment?: {
     fogColor?: string
     fogNear?: number
@@ -116,7 +128,7 @@ export interface VisualCues {
     sunIntensity?: number
   }
   locations: VisualCuesLocation[]
-  hotspots: { id: string; label: string; command: string; risk?: number; position: number[] }[]
+  hotspots: { id: string; label: string; command: string; risk?: number; icon?: string | null; position: number[] }[]
   edges?: VisualCuesEdge[]
 }
 

@@ -1,7 +1,5 @@
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
 import { PRODUCT } from '../../data/product'
 import {
   fetchHealth,
@@ -13,10 +11,15 @@ import {
   type VisualCues,
 } from '../../lib/play-api'
 import { ConsequencePanel } from './ConsequencePanel'
-import { DistrictScene3D, type Selection } from './3d/DistrictScene3D'
+import type { Selection } from './3d/district-scene-types'
 import { PlayOfflineFallback } from './PlayOfflineFallback'
 
+const Play3DCanvas = lazy(() =>
+  import('./3d/Play3DCanvas').then((m) => ({ default: m.Play3DCanvas })),
+)
+
 type BootPhase = 'loading' | 'offline' | 'ready'
+type CameraMode = 'walk' | 'orbit'
 
 export function WorldMindPlay3D() {
   const [phase, setPhase] = useState<BootPhase>('loading')
@@ -29,6 +32,7 @@ export function WorldMindPlay3D() {
   const [command, setCommand] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cameraMode, setCameraMode] = useState<CameraMode>('walk')
 
   const boot = useCallback(async () => {
     setPhase('loading')
@@ -62,6 +66,7 @@ export function WorldMindPlay3D() {
       setVisualCues(state.visualCues ?? null)
       setShell(state.gameShell)
       setOutput(result?.text ?? res.text ?? 'Command completed.')
+      setSelection(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Command failed')
     } finally {
@@ -86,15 +91,28 @@ export function WorldMindPlay3D() {
   if (phase === 'offline' || !visualCues) return <PlayOfflineFallback />
 
   const topbar = shell?.topbar ?? {}
-  const camTarget = (visualCues.camera?.target ?? [0, 1.5, 0]) as [number, number, number]
+  const walkEye = (visualCues.camera?.walkEye ?? [0, 1.65, 4.5]) as [number, number, number]
+  const walkTarget = (visualCues.camera?.walkTarget ?? visualCues.camera?.target ?? [0, 1.4, 0]) as [
+    number,
+    number,
+    number,
+  ]
+  const orbitTarget = (visualCues.camera?.target ?? [0, 1.5, 0]) as [number, number, number]
 
   return (
     <div className="h-screen w-screen bg-void text-text flex flex-col overflow-hidden">
       <header className="shrink-0 border-b border-border/50 bg-void/90 backdrop-blur-xl z-10 px-4 h-12 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 font-mono text-xs">
           <a href="/" className="text-muted hover:text-cyan-glow">← {PRODUCT.name}</a>
-          <a href="/play" className="text-cyan/80 hover:text-cyan-glow">2D play</a>
+          <a href="/play" className="text-cyan/80 hover:text-cyan-glow">2D</a>
           <span className="text-amber-glow font-semibold">3D</span>
+          <button
+            type="button"
+            onClick={() => setCameraMode((m) => (m === 'walk' ? 'orbit' : 'walk'))}
+            className="text-[10px] px-2 py-0.5 rounded border border-border text-muted hover:text-cyan-glow"
+          >
+            {cameraMode === 'walk' ? 'Orbit cam' : 'Walk cam'}
+          </button>
         </div>
         <div className="flex gap-3 font-mono text-[11px] text-muted">
           {health?.version && <span>{health.version}</span>}
@@ -105,19 +123,33 @@ export function WorldMindPlay3D() {
       </header>
 
       <div className="flex-1 relative min-h-0">
-        <Canvas shadows camera={{ position: [camTarget[0] + 8, camTarget[1] + 10, camTarget[2] + 12], fov: 50 }}>
-          <Suspense fallback={null}>
-            <DistrictScene3D cues={visualCues} onSelect={setSelection} />
-            <OrbitControls target={camTarget} enableDamping dampingFactor={0.06} minDistance={7} maxDistance={32} />
-          </Suspense>
-        </Canvas>
+        <Suspense
+          fallback={
+            <div className="absolute inset-0 flex items-center justify-center font-mono text-sm text-cyan-glow">
+              Loading WebGL…
+            </div>
+          }
+        >
+          <Play3DCanvas
+            visualCues={visualCues}
+            cameraMode={cameraMode}
+            walkEye={walkEye}
+            walkTarget={walkTarget}
+            orbitTarget={orbitTarget}
+            onSelect={setSelection}
+          />
+        </Suspense>
 
         <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[400px] pointer-events-none">
           <div className="pointer-events-auto rounded-xl border border-border/70 bg-void/90 backdrop-blur-xl p-4 shadow-2xl">
             <h2 className="font-display text-sm text-text-bright mb-1">
-              {selection?.label ?? 'Click building, agent, or hotspot'}
+              {selection?.label ?? 'Explore the district'}
             </h2>
-            <p className="text-xs text-muted mb-3">{selection?.description ?? 'Orbit with mouse · scroll to zoom'}</p>
+            <p className="text-xs text-muted mb-3">
+              {cameraMode === 'walk'
+                ? 'WASD move · drag to look · click hotspots & agents'
+                : 'Orbit · scroll zoom · click buildings to travel'}
+            </p>
             {selection && (
               <div className="flex flex-wrap gap-2 mb-3">
                 {selection.kind === 'location' && (

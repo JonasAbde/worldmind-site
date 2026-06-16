@@ -4,7 +4,7 @@ const DEFAULT_PAGES_ORIGIN = 'https://worldmind-site.pages.dev'
 function isCorePath(pathname) {
   return (
     pathname.startsWith('/api/') ||
-    pathname.startsWith('/assets/locations/')
+    pathname.startsWith('/assets/')
   )
 }
 
