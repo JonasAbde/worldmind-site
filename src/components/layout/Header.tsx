@@ -5,6 +5,7 @@ import { Button } from '../ui/Button'
 
 const NAV = [
   { label: 'Play', href: '/play' },
+  { label: 'Play 3D', href: '/play/3d' },
   { label: 'Simulation', href: '#simulation' },
   { label: 'Leno', href: '#leno' },
   { label: 'District', href: '#district' },

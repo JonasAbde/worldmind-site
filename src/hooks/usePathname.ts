@@ -15,3 +15,7 @@ export function usePathname() {
 export function isPlayRoute(pathname: string) {
   return pathname === '/play' || pathname === '/play/'
 }
+
+export function isPlay3dRoute(pathname: string) {
+  return pathname === '/play/3d' || pathname === '/play/3d/'
+}

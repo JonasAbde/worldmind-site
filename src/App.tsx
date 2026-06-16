@@ -16,7 +16,8 @@ import { EngineTicker } from './components/ui/EngineTicker'
 import { IntroSequence } from './components/ui/IntroSequence'
 import { ScrollProgress } from './components/ui/ScrollProgress'
 import { SectionDivider } from './components/ui/SectionDivider'
-import { isPlayRoute, usePathname } from './hooks/usePathname'
+import { isPlay3dRoute, isPlayRoute, usePathname } from './hooks/usePathname'
+import { WorldMindPlay3D } from './components/play/WorldMindPlay3D'
 
 function MarketingSite() {
   return (
@@ -54,6 +55,10 @@ function MarketingSite() {
 
 function App() {
   const pathname = usePathname()
+
+  if (isPlay3dRoute(pathname)) {
+    return <WorldMindPlay3D />
+  }
 
   if (isPlayRoute(pathname)) {
     return <WorldMindPlayPortal />

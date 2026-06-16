@@ -73,6 +73,53 @@ export interface ConsequenceBeat {
   summary: string
 }
 
+export interface VisualCuesAgent {
+  id: string
+  name: string
+  role?: string
+  position: number[]
+  commands: { talk: string; ask: string; pay: string; leno: string }
+}
+
+export interface VisualCuesLocation {
+  id: string
+  label: string
+  zone: string
+  position: number[]
+  scale?: number[]
+  color?: string
+  emissive?: string
+  emissiveIntensity?: number
+  command: string
+  agents?: VisualCuesAgent[]
+}
+
+export interface VisualCuesEdge {
+  from: string
+  to: string
+  fromPosition?: number[]
+  toPosition?: number[]
+}
+
+export interface VisualCues {
+  kind: string
+  version: number
+  playerLocationId?: string | null
+  camera?: { target?: number[]; distance?: number }
+  environment?: {
+    fogColor?: string
+    fogNear?: number
+    fogFar?: number
+    groundColor?: string
+    gridColor?: string
+    ambientIntensity?: number
+    sunIntensity?: number
+  }
+  locations: VisualCuesLocation[]
+  hotspots: { id: string; label: string; command: string; risk?: number; position: number[] }[]
+  edges?: VisualCuesEdge[]
+}
+
 export interface GameShell {
   topbar: GameShellTopbar
   location: GameShellLocation
@@ -112,6 +159,7 @@ export interface StateResponse {
   time?: string
   gameShell: GameShell
   districtView?: DistrictView
+  visualCues?: VisualCues
   playerSnapshot?: { money?: number; reputation?: number; energy?: number }
 }
 
