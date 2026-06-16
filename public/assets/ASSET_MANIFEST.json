@@ -1,0 +1,112 @@
+[
+  {
+    "filename": "worldmind-hero-key-art.png",
+    "source": "futuristisk_havneby_i_regnvejr.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "213688b5ced6566d6caf80b4d1d0254df3f38b53bd9f919681b73910d9f808f0",
+    "bytes": 5098564
+  },
+  {
+    "filename": "new-aarhus-district-01.png",
+    "source": "regnfuld_futuristisk_by_under_lysd\u00e6mpet_himmel.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "8003e8644b181f8a2ba55ad75abdc6fa84855d2020ea4b8eb26c1eb8543f9727",
+    "bytes": 4989899
+  },
+  {
+    "filename": "missing-delivery-case-board.png",
+    "source": "cyberpunk_detektivens_efterforskningsbr\u00e6t.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "e552e8d1a67baa1e764a4daa0ee19ba0efc84f3b149c6d177d2859f7b3b9dd2e",
+    "bytes": 4912702
+  },
+  {
+    "filename": "leno-evidence-guard.png",
+    "source": "regnvejrsnattens_futuristiske_byudsigtsanalyse.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "b1e8c347be72c67e2020dc8aae043211878193b5a2721bcb78350381b07b6414",
+    "bytes": 4358624
+  },
+  {
+    "filename": "simulation-hud-memory-permissions.png",
+    "source": "futuristisk_cyberpunk_dashboard_med_netv\u00e6rk.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "4f7e44abf71a436f7855ef658fb18feb01fe507be0279c0e691f414ed9698866",
+    "bytes": 4421209
+  },
+  {
+    "filename": "timeline-branches.png",
+    "source": "futuristisk_tidslinje_over_regnv\u00e5d_by.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "c67cb19b31ced642f98cc293ba82836b00212b72ecd84636f1b75d2dd9ac9e6d",
+    "bytes": 4336947
+  },
+  {
+    "filename": "save-browser-snapshot-diff.png",
+    "source": "cinematisk_teknologi_dashbord_i_regnvejr.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "6f11434264a742c52a56e7518ddf46cd3319aacc0f844411cc75696e54c2da77",
+    "bytes": 3613742
+  },
+  {
+    "filename": "npc-agent-portrait-set.png",
+    "source": "cyber_noir_portraits_af_fremtidsbyen.png",
+    "size": [
+      2560,
+      1440
+    ],
+    "aspect_ratio": 1.7778,
+    "sha256": "19e5496f2ffa2b489158b3d7af6b3c49aa9c872b52b98e52ea75240b1c6d8355",
+    "bytes": 4234382
+  },
+  {
+    "filename": "worldmind-og-image.png",
+    "source": "regnfuld_nat_ved_den_futuristiske_havn.png",
+    "size": [
+      1200,
+      630
+    ],
+    "aspect_ratio": 1.9048,
+    "sha256": "42bae2fa6ee20240e23d63a9755cde7f10146210c61bb6047543686f1e2a8e14",
+    "bytes": 1247546
+  },
+  {
+    "filename": "worldmind-app-icon.png",
+    "source": "futuristisk_netv\u00e6rk_med_lysende_kerne.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "aspect_ratio": 1.0,
+    "sha256": "c1aff6f3d83c2005ef45827a639e2479099df2015d9973ffc187a6e0b90e026b",
+    "bytes": 1255467
+  }
+]

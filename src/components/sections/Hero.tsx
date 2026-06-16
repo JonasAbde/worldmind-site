@@ -14,6 +14,14 @@ export function Hero() {
       <SimulationOverlay />
 
       {/* Harbour gradient — cold blue left, warm amber right */}
+      <img
+        src="/assets/worldmind-hero-key-art.png"
+        alt="Cinematic key art for WorldMind showing New Aarhus District 01 with simulation overlays"
+        className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-screen"
+        onError={(event) => {
+          event.currentTarget.style.display = 'none'
+        }}
+      />
       <div className="absolute inset-0 bg-gradient-to-br from-registry-dim/30 via-deep/50 to-amber-dim/20" />
       <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-deep via-transparent to-transparent" />
 

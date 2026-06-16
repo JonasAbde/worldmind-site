@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 
 type ScreenshotVariant = 'web-play' | 'saves' | 'timeline' | 'leno'
@@ -6,6 +7,8 @@ type ScreenshotVariant = 'web-play' | 'saves' | 'timeline' | 'leno'
 interface ScreenshotFrameProps {
   title: string
   label: string
+  imageSrc?: string
+  imageAlt?: string
   variant?: ScreenshotVariant
   children?: ReactNode
 }
@@ -20,9 +23,14 @@ const variantAccent: Record<ScreenshotVariant, string> = {
 export function ScreenshotFrame({
   title,
   label,
+  imageSrc,
+  imageAlt,
   variant = 'web-play',
   children,
 }: ScreenshotFrameProps) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const showImage = Boolean(imageSrc) && !imageFailed
+
   return (
     <motion.div
       className="relative rounded-xl border border-border bg-void overflow-hidden glow-cyan"
@@ -39,24 +47,58 @@ export function ScreenshotFrame({
         </span>
       </div>
       <div className="relative p-5 min-h-[180px] flex items-center justify-center text-xs text-muted">
-        {children ?? <span className="opacity-70">Screenshot placeholder — wired to real runtime later.</span>}
+        {showImage ? (
+          <img
+            src={imageSrc}
+            alt={imageAlt ?? title}
+            loading="lazy"
+            className="w-full h-full max-h-[440px] object-cover rounded-lg border border-border/50"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          children ?? <span className="opacity-70">Screenshot placeholder — wired to real runtime later.</span>
+        )}
       </div>
     </motion.div>
   )
 }
 
 export const LiveWebPlayScreenshot = () => (
-  <ScreenshotFrame title="Live Web Play UI" label="Generated from core repo" variant="web-play" />
+  <ScreenshotFrame
+    title="Live Web Play UI"
+    label="Generated from core repo"
+    variant="web-play"
+    imageSrc="/assets/npc-agent-portrait-set.png"
+    imageAlt="WorldMind multi-agent portrait panel representing active NPC personalities in the live simulation UI"
+  />
 )
 
 export const SaveBrowserScreenshot = () => (
-  <ScreenshotFrame title="Save Browser" label="Inspect and diff saves" variant="saves" />
+  <ScreenshotFrame
+    title="Save Browser"
+    label="Inspect and diff saves"
+    variant="saves"
+    imageSrc="/assets/save-browser-snapshot-diff.png"
+    imageAlt="WorldMind save browser visual showing timeline snapshot comparison and restore workflow"
+  />
 )
 
 export const TimelineBranchesScreenshot = () => (
-  <ScreenshotFrame title="Timeline Branches" label="Branch & compare worlds" variant="timeline" />
+  <ScreenshotFrame
+    title="Timeline Branches"
+    label="Branch & compare worlds"
+    variant="timeline"
+    imageSrc="/assets/timeline-branches.png"
+    imageAlt="WorldMind timeline branching visual showing save, restore and snapshot diff concepts"
+  />
 )
 
 export const LenoEvidenceScreenshot = () => (
-  <ScreenshotFrame title="Leno Evidence Guard" label="Evidence-gated answers" variant="leno" />
+  <ScreenshotFrame
+    title="Leno Evidence Guard"
+    label="Evidence-gated answers"
+    variant="leno"
+    imageSrc="/assets/leno-evidence-guard.png"
+    imageAlt="WorldMind Leno evidence guard visual showing redacted hidden truth and known evidence"
+  />
 )

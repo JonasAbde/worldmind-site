@@ -1,6 +1,7 @@
 import { SIMULATION_SYSTEMS } from '../../data/product'
 import { Card } from '../ui/Card'
 import { Section, SectionHeader } from '../ui/Section'
+import { ScreenshotFrame } from '../ui/ScreenshotFrame'
 
 const colorMap = {
   cyan: 'text-cyan-glow',
@@ -23,6 +24,16 @@ export function HowSimulationWorks() {
         subtitle="Not scripted quests. Every system layer contributes to emergent story — validated by the World Engine at runtime."
         align="center"
       />
+
+      <div className="mb-8">
+        <ScreenshotFrame
+          title="Simulation HUD: memory and permissions"
+          label="Runtime systems"
+          variant="web-play"
+          imageSrc="/assets/simulation-hud-memory-permissions.png"
+          imageAlt="WorldMind simulation HUD visual showing memory state and permission-aware agent behavior"
+        />
+      </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {SIMULATION_SYSTEMS.map((system, i) => (

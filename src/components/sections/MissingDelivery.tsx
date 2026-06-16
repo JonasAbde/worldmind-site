@@ -1,6 +1,7 @@
 import { MISSING_DELIVERY, RESOLUTION_PATHS } from '../../data/product'
 import { Card } from '../ui/Card'
 import { Section, SectionHeader } from '../ui/Section'
+import { ScreenshotFrame } from '../ui/ScreenshotFrame'
 
 const accentMap = {
   amber: 'amber' as const,
@@ -31,32 +32,32 @@ export function MissingDelivery() {
           </div>
         </Card>
 
-        <div className="relative rounded-xl overflow-hidden border border-border bg-void p-8">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber/5 via-transparent to-registry/5" />
-          <div className="relative">
-            <p className="font-mono text-xs text-muted uppercase tracking-widest mb-6">
-              District incident
-            </p>
-            <div className="space-y-3 font-mono text-sm">
-              <div className="flex gap-3 text-amber-glow/80">
-                <span className="text-muted">[cafe]</span>
-                <span>supply_shortage → sara.cafe</span>
-              </div>
-              <div className="flex gap-3 text-registry-glow/80">
-                <span className="text-muted">[rumor]</span>
-                <span>false_registry_claim → nadia</span>
-              </div>
-              <div className="flex gap-3 text-cyan-glow/80">
-                <span className="text-muted">[agent]</span>
-                <span>malik.refuse_delivery</span>
-              </div>
-              <div className="flex gap-3 text-cyan-glow/60">
-                <span className="text-muted">[witness]</span>
-                <span>rune.observation → pending</span>
-              </div>
+        <ScreenshotFrame
+          title="Missing Delivery case board"
+          label="District incident"
+          variant="saves"
+          imageSrc="/assets/missing-delivery-case-board.png"
+          imageAlt="WorldMind missing delivery investigation board showing connected claims, witnesses and delivery evidence"
+        >
+          <div className="space-y-3 font-mono text-sm">
+            <div className="flex gap-3 text-amber-glow/80">
+              <span className="text-muted">[cafe]</span>
+              <span>supply_shortage → sara.cafe</span>
+            </div>
+            <div className="flex gap-3 text-registry-glow/80">
+              <span className="text-muted">[rumor]</span>
+              <span>false_registry_claim → nadia</span>
+            </div>
+            <div className="flex gap-3 text-cyan-glow/80">
+              <span className="text-muted">[agent]</span>
+              <span>malik.refuse_delivery</span>
+            </div>
+            <div className="flex gap-3 text-cyan-glow/60">
+              <span className="text-muted">[witness]</span>
+              <span>rune.observation → pending</span>
             </div>
           </div>
-        </div>
+        </ScreenshotFrame>
       </div>
 
       <p className="font-mono text-xs text-muted uppercase tracking-widest mb-6">
