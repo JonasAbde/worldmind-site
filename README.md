@@ -52,17 +52,27 @@ One-time setup:
 
 ```bash
 npm run cf:login
-npm run cf:init          # creates worldmind-site Pages project
-npm run deploy:worker    # attaches worldmind.tekup.dk via Worker custom domain
+npm run cf:git             # git-connected Pages project (already done for production)
+npm run deploy:worker      # attaches worldmind.tekup.dk via Worker custom domain
 ```
 
-Deploy after code changes:
+Deploy after code changes — push to `main` and Cloudflare builds automatically:
 
 ```bash
-npm run deploy           # build + upload to Cloudflare Pages
+git push origin main
 ```
 
-The Worker proxy is already live; routine deploys only need `npm run deploy`.
+Manual redeploy without a new commit:
+
+```bash
+npm run cf:deploy
+```
+
+Local emergency build + upload (bypasses Git; prefer `git push`):
+
+```bash
+npm run deploy:local
+```
 
 Check stack status:
 
@@ -76,15 +86,13 @@ npm run cf:status
 
 If you prefer Pages-native custom domains instead, add a CNAME `worldmind` → `worldmind-site.pages.dev` (proxied) in **Cloudflare → tekup.dk → DNS**, or run `npm run cf:dns` with a token that has **Zone → DNS → Edit**.
 
-### CI/CD
+### CI/CD (Cloudflare Git — no GitHub Actions)
 
-GitHub Actions workflows (`.github/workflows/`) run lint + build + deploy on push to `main`.
+Pushes to `main` trigger **Cloudflare Pages** to run `npm ci && npm run build` and deploy production. This uses Cloudflare's build infrastructure — **zero GitHub Actions minutes**.
 
-> **Billing block:** If workflows fail with “account is locked due to a billing issue”, fix billing at [GitHub Settings → Billing](https://github.com/settings/billing). Until then, deploy manually with `npm run deploy`.
+GitHub Actions workflows were removed (billing lock). See `.github/workflows/README.md`.
 
-**Alternative (no GitHub Actions):** Connect the repo in [Cloudflare Workers & Pages](https://dash.cloudflare.com/) → `worldmind-site` → Settings → Builds → Connect to Git. Cloudflare builds and deploys on push without using GitHub Actions minutes.
-
-Required GitHub secrets (for Actions): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. Set via `node scripts/setup-github-secrets.mjs` or manually. Prefer a dedicated [API token](https://dash.cloudflare.com/profile/api-tokens) over the wrangler OAuth token.
+One-time migration script (already applied): `npm run cf:git`
 
 ## Project structure
 

@@ -51,6 +51,8 @@ async function main() {
   console.log(`Project: ${project.result.name}`)
   console.log(`Subdomain: https://${project.result.subdomain}`)
   console.log(`Production branch: ${project.result.production_branch ?? 'n/a'}`)
+  const sourceType = project.result.source?.type ?? 'direct_upload'
+  console.log(`Source: ${sourceType}${project.result.source?.config?.repo_name ? ` (${project.result.source.config.owner}/${project.result.source.config.repo_name})` : ''}`)
 
   const domains = await cfFetch(
     token,

@@ -15,12 +15,14 @@
     "cf:login": "wrangler login",
     "cf:whoami": "wrangler whoami",
     "cf:init": "wrangler pages project create worldmind-site --production-branch=main",
+    "cf:git": "node scripts/setup-pages-git.mjs",
+    "cf:deploy": "node scripts/trigger-deployment.mjs worldmind-site",
     "cf:domain": "node scripts/add-pages-domain.mjs",
     "cf:status": "node scripts/cloudflare-status.mjs",
     "cf:dns": "node scripts/fix-pages-dns.mjs",
-    "deploy:cf": "npm run build && wrangler pages deploy dist --project-name=worldmind-site --commit-dirty=true",
+    "deploy:local": "npm run build && wrangler pages deploy dist --project-name=worldmind-site --commit-dirty=true",
     "deploy:worker": "wrangler deploy",
-    "deploy": "npm run deploy:cf"
+    "deploy": "node scripts/trigger-deployment.mjs worldmind-site"
   },
   "dependencies": {
     "framer-motion": "^12.40.0",
