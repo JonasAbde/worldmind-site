@@ -200,7 +200,7 @@ if (apiOk) {
     await verifyCoreAsset(stateResult.visualCues)
   }
 } else if (!bridge?.coreConfigured) {
-  record('GET /api/state visualCues', false, 'skipped — WORLDMIND_CORE_ORIGIN not set')
+  record('GET /api/state visualCues v4', false, 'skipped — WORLDMIND_CORE_ORIGIN not set')
   record('POST /api/command move walkAnimation', false, 'skipped — core offline')
   record('core asset', false, 'skipped — core offline')
 }
