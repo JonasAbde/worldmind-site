@@ -1,4 +1,10 @@
-﻿import type { VisualCues, VisualCuesLocation, VisualCuesLocationCollision } from './play-api'
+﻿import type { VisualCues, VisualCuesLocation } from './play-api'
+import {
+  type BuildingCollider,
+  collidersFromLocations,
+  collidesWithBuildings,
+  streetOffsetForLocation,
+} from './building-collision'
 
 export const LOCOMOTION = {
   walkSpeed: 5.8,
@@ -8,13 +14,14 @@ export const LOCOMOTION = {
   playerY: 0.1,
   districtMin: -16,
   districtMax: 16,
-  /** Fallback circle when API collision is missing (legacy cues). */
-  buildingRadius: 1.65,
-  /** Softer zone at current location so you can leave the anchor. */
-  currentLocationRadius: 0.85,
-  spawnStreetOffset: 2.85,
+  /** Legacy default street offset when location metadata is missing. */
+  spawnStreetOffset: 2.7,
   enterRadius: 2.6,
   maxDeltaSec: 1 / 20,
+  /** @deprecated use streetOffsetForLocation */
+  buildingRadius: 1.65,
+  /** @deprecated use resolveLocationCollision */
+  currentLocationRadius: 0.85,
 } as const
 
 export type LocomotionKeys = {
@@ -69,77 +76,6 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
 }
 
-type BuildingCollider = {
-  x: number
-  z: number
-  id: string
-  isCurrent: boolean
-  shape: 'box' | 'circle'
-  halfExtents: [number, number]
-  radius: number
-  currentLocationRadius: number
-}
-
-function colliderFromLocation(
-  loc: VisualCuesLocation,
-  isCurrent: boolean,
-): BuildingCollider {
-  const pos = loc.position as [number, number, number]
-  const col = loc.collision as VisualCuesLocationCollision | undefined
-  if (col?.halfExtents && typeof col.radius === 'number') {
-    return {
-      x: pos[0],
-      z: pos[2],
-      id: loc.id,
-      isCurrent,
-      shape: col.shape === 'circle' ? 'circle' : 'box',
-      halfExtents: [col.halfExtents[0], col.halfExtents[1]],
-      radius: col.radius,
-      currentLocationRadius: col.currentLocationRadius ?? LOCOMOTION.currentLocationRadius,
-    }
-  }
-  const r = isCurrent ? LOCOMOTION.currentLocationRadius : LOCOMOTION.buildingRadius
-  return {
-    x: pos[0],
-    z: pos[2],
-    id: loc.id,
-    isCurrent,
-    shape: 'circle',
-    halfExtents: [r, r],
-    radius: r,
-    currentLocationRadius: LOCOMOTION.currentLocationRadius,
-  }
-}
-
-function buildingColliders(
-  locations: VisualCuesLocation[],
-  currentLocationId?: string | null,
-): BuildingCollider[] {
-  return locations.map((loc) => colliderFromLocation(loc, loc.id === currentLocationId))
-}
-
-function pointInCollider(px: number, pz: number, b: BuildingCollider): boolean {
-  if (b.isCurrent) {
-    const dx = px - b.x
-    const dz = pz - b.z
-    const r = b.currentLocationRadius
-    return dx * dx + dz * dz < r * r
-  }
-  if (b.shape === 'circle') {
-    const dx = px - b.x
-    const dz = pz - b.z
-    return dx * dx + dz * dz < b.radius * b.radius
-  }
-  return Math.abs(px - b.x) < b.halfExtents[0] && Math.abs(pz - b.z) < b.halfExtents[1]
-}
-
-function collidesWithBuildings(x: number, z: number, buildings: BuildingCollider[]) {
-  for (const b of buildings) {
-    if (pointInCollider(x, z, b)) return true
-  }
-  return false
-}
-
 export function clampDistrictPosition(
   x: number,
   z: number,
@@ -170,7 +106,6 @@ function clampAxis(
   return null
 }
 
-/** Camera-relative forward on the XZ plane (W moves away from camera into the district). */
 export function cameraForwardYaw(
   cameraX: number,
   cameraZ: number,
@@ -217,7 +152,7 @@ export function integrateLocomotion(
   const step = Math.min(dt, LOCOMOTION.maxDeltaSec)
   const dir = inputToWorldDirection(keys, cameraYaw)
   const maxSpeed = keys.sprint ? LOCOMOTION.sprintSpeed : LOCOMOTION.walkSpeed
-  const buildings = buildingColliders(locations, currentLocationId)
+  const buildings = collidersFromLocations(locations, currentLocationId)
 
   let { vx, vz } = velocity
   if (dir) {
@@ -319,7 +254,7 @@ export function streetAnchorFromLocation(
   const [px, , pz] = fallback
   const dist = Math.hypot(px - bx, pz - bz)
   if (dist > 0.6) return [px, LOCOMOTION.playerY, pz]
-  return [bx, LOCOMOTION.playerY, bz + LOCOMOTION.spawnStreetOffset]
+  return [bx, LOCOMOTION.playerY, bz + streetOffsetForLocation(loc)]
 }
 
 export function anchorFromCues(cues: VisualCues): [number, number, number] {

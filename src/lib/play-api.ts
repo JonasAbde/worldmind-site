@@ -252,13 +252,12 @@ export interface VisualCuesEdge {
 }
 
 export interface WalkGraphNode {
-  id: string
-  label?: string
+  walkAnchor: number[]
   position: number[]
 }
 
 export interface WalkGraph {
-  nodes: WalkGraphNode[]
+  nodes: Record<string, WalkGraphNode>
   edges: { from: string; to: string }[]
 }
 
