@@ -57,11 +57,24 @@ Deploy production:
 npm run deploy:cf
 ```
 
-Check custom domain status:
+Check stack status (project, domains, deployments, DNS):
 
 ```bash
-node scripts/check-pages-domain.mjs
+npm run cf:status
+npm run cf:dns       # create/fix CNAME when token has Zone DNS Edit
 ```
+
+### Custom domain DNS
+
+After `npm run cf:domain`, Cloudflare Pages expects a CNAME on `tekup.dk`:
+
+| Type  | Name      | Target                  | Proxy   |
+|-------|-----------|-------------------------|---------|
+| CNAME | `worldmind` | `worldmind-site.pages.dev` | Proxied |
+
+Add it in **Cloudflare → tekup.dk → DNS**, or run `npm run cf:dns` with a token that includes **Zone → DNS → Edit** for `tekup.dk`. The wrangler OAuth token only has Zone read, so auto-provisioning may fail until DNS is added.
+
+Domain status flips from `pending` → `active` once the CNAME resolves and SSL provisions (usually a few minutes).
 
 ### CI/CD
 
@@ -70,10 +83,14 @@ GitHub Actions runs on every push to `main`:
 - **CI:** lint + build
 - **Deploy:** build + `wrangler pages deploy` to Cloudflare Pages
 
-Required GitHub repository secrets:
+> **Note:** If workflows fail immediately with “account is locked due to a billing issue”, resolve billing at [GitHub Settings → Billing](https://github.com/settings/billing) before Actions can run.
 
-- `CLOUDFLARE_API_TOKEN` — API token with **Cloudflare Pages Edit**
+Required GitHub repository secrets (set via `node scripts/setup-github-secrets.mjs` or manually):
+
+- `CLOUDFLARE_API_TOKEN` — API token with **Account → Cloudflare Pages → Edit** (and **Zone → DNS → Edit** if you want DNS automation)
 - `CLOUDFLARE_ACCOUNT_ID` — `1cd2e6c70a2918567a3edcf8eadd7458`
+
+Prefer a dedicated [API token](https://dash.cloudflare.com/profile/api-tokens) over the wrangler OAuth token for CI — OAuth tokens expire and lack DNS write.
 
 ## Project structure
 

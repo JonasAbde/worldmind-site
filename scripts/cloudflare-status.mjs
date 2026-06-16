@@ -76,17 +76,22 @@ async function main() {
   )
   const zone = zones.result?.[0]
   if (zone) {
-    const records = await cfFetch(
-      token,
-      `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records?name=${CUSTOM_DOMAIN}`,
-    )
-    console.log(`\nDNS for ${CUSTOM_DOMAIN}:`)
-    if (!records.result?.length) {
-      console.log('  (no record found — Cloudflare may still be provisioning)')
-    } else {
-      for (const r of records.result) {
-        console.log(`  - ${r.type} ${r.name} → ${r.content} (proxied: ${r.proxied})`)
+    try {
+      const records = await cfFetch(
+        token,
+        `https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records?name=${CUSTOM_DOMAIN}`,
+      )
+      console.log(`\nDNS for ${CUSTOM_DOMAIN}:`)
+      if (!records.result?.length) {
+        console.log('  (no record — run npm run cf:dns or add CNAME in dashboard)')
+      } else {
+        for (const r of records.result) {
+          console.log(`  - ${r.type} ${r.name} → ${r.content} (proxied: ${r.proxied})`)
+        }
       }
+    } catch {
+      console.log(`\nDNS for ${CUSTOM_DOMAIN}: (token lacks Zone DNS read)`)
+      console.log('  Add manually: CNAME worldmind → worldmind-site.pages.dev (proxied)')
     }
   }
 
