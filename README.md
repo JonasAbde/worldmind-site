@@ -35,6 +35,20 @@ npm run lint
 npm run preview
 ```
 
+### `/play` portal (worldmind-core)
+
+Work on **`main`** only. The `/play` route boots against [worldmind-core](https://github.com/JonasAbde/worldmind-core) Play API (`GET /api/state`, `POST /api/command`).
+
+```bash
+# Terminal 1 — core (repo worldmind-core, branch master)
+WM_CORS_ORIGIN=http://localhost:5173 npm run play:server
+
+# Terminal 2 — site (this repo)
+cp .env.example .env   # VITE_WORLDMIND_CORE_URL=http://127.0.0.1:8080
+npm run dev
+# open http://localhost:5173/play
+```
+
 ## Assets
 
 Source PNGs live in `public/assets/`. Optimized WebP variants:
