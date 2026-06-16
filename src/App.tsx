@@ -1,5 +1,6 @@
 import { Footer } from './components/layout/Footer'
 import { Header } from './components/layout/Header'
+import { WorldMindPlayPortal } from './components/play/WorldMindPlayPortal'
 import { District } from './components/sections/District'
 import { EngineProof } from './components/sections/EngineProof'
 import { FinalCta } from './components/sections/FinalCta'
@@ -15,11 +16,11 @@ import { EngineTicker } from './components/ui/EngineTicker'
 import { IntroSequence } from './components/ui/IntroSequence'
 import { ScrollProgress } from './components/ui/ScrollProgress'
 import { SectionDivider } from './components/ui/SectionDivider'
+import { isPlayRoute, usePathname } from './hooks/usePathname'
 
-function App() {
+function MarketingSite() {
   return (
     <div className="bg-void text-text relative">
-      {/* Full-page edge vignette */}
       <div className="pointer-events-none fixed inset-0 z-[55] vignette" aria-hidden />
       <IntroSequence />
       <ScrollProgress />
@@ -49,6 +50,16 @@ function App() {
       <Footer />
     </div>
   )
+}
+
+function App() {
+  const pathname = usePathname()
+
+  if (isPlayRoute(pathname)) {
+    return <WorldMindPlayPortal />
+  }
+
+  return <MarketingSite />
 }
 
 export default App

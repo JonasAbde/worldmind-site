@@ -4,7 +4,7 @@ import { PRODUCT } from '../../data/product'
 import { Button } from '../ui/Button'
 
 const NAV = [
-  { label: 'Play', href: '#play' },
+  { label: 'Play', href: '/play' },
   { label: 'Simulation', href: '#simulation' },
   { label: 'Leno', href: '#leno' },
   { label: 'District', href: '#district' },
@@ -70,12 +70,7 @@ export function Header() {
           ))}
         </nav>
 
-        <Button
-          href={PRODUCT.playInstructionsUrl}
-          variant="secondary"
-          className="!px-4 !py-2 text-xs"
-          external
-        >
+        <Button href="/play" variant="secondary" className="!px-4 !py-2 text-xs">
           Play
         </Button>
       </div>
