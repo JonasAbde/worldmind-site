@@ -62,7 +62,16 @@ npm run optimize:assets
 Production uses two Cloudflare pieces:
 
 1. **Pages** hosts the static build at `worldmind-site.pages.dev`
-2. **Worker** (`worldmind-proxy`) maps `worldmind.tekup.dk` → Pages (auto-provisions DNS + SSL without Zone DNS API access)
+2. **Worker** (`worldmind-proxy`) maps `worldmind.tekup.dk` → Pages, and forwards `/api/*` to worldmind-core when configured
+
+Set the play-server origin on the Worker (once core is deployed):
+
+```bash
+wrangler secret put WORLDMIND_CORE_ORIGIN -c wrangler.worker.toml
+# e.g. https://your-play-server.example.com
+```
+
+Without `WORLDMIND_CORE_ORIGIN`, `/play` shows the offline fallback in production (marketing site still works).
 
 One-time setup:
 
@@ -97,7 +106,17 @@ npm run cf:status
 npm run cf:verify
 ```
 
-### Custom domain (production routing)
+### Production Play API (Worker proxy)
+
+The `worldmind-proxy` Worker routes `/api/*` and `/assets/locations/*` to the core play-server. Set Worker secret:
+
+```bash
+wrangler secret put WORLDMIND_CORE_ORIGIN -c wrangler.worker.toml
+# e.g. https://your-tunnel-or-vps-host (no trailing slash)
+```
+
+Set Pages build env: `VITE_WORLDMIND_CORE_URL=https://worldmind.tekup.dk`
+
 
 `worldmind.tekup.dk` is routed by the `worldmind-proxy` Worker (`wrangler.worker.toml`). Cloudflare auto-provisions DNS and TLS on `tekup.dk` without Zone DNS API access.
 

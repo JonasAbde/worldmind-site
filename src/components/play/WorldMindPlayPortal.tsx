@@ -5,12 +5,21 @@ import {
   assetUrl,
   fetchHealth,
   fetchState,
+  matchMajorDecision,
+  postBranch,
   postCommand,
+  postSave,
+  type ConsequenceBeat,
+  type DistrictView,
   type GameShell,
   type GameShellLocation,
   type HealthResponse,
+  type MajorDecision,
 } from '../../lib/play-api'
 import { Card } from '../ui/Card'
+import { ConsequencePanel } from './ConsequencePanel'
+import { FounderPanel } from './FounderPanel'
+import { MajorDecisionModal } from './MajorDecisionModal'
 import { PlayOfflineFallback } from './PlayOfflineFallback'
 
 type BootPhase = 'loading' | 'offline' | 'ready'
@@ -19,12 +28,68 @@ export function WorldMindPlayPortal() {
   const [phase, setPhase] = useState<BootPhase>('loading')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [shell, setShell] = useState<GameShell | null>(null)
+  const [districtView, setDistrictView] = useState<DistrictView | null>(null)
   const [output, setOutput] = useState('')
+  const [consequenceBeat, setConsequenceBeat] = useState<ConsequenceBeat | null>(null)
   const [command, setCommand] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingDecision, setPendingDecision] = useState<{
+    decision: MajorDecision
+    command: string
+  } | null>(null)
 
-  const boot = useCallback(async () => {
+  const applyCommandResult = useCallback((res: Awaited<ReturnType<typeof postCommand>>) => {
+    const result = res.result
+    if (result?.gameShell) setShell(result.gameShell)
+    const lines = [result?.text ?? res.text ?? 'Command completed.']
+    if (result?.leno?.summary) lines.push(`Leno: ${result.leno.summary}`)
+    if (result?.majorDecisionPrompt?.label) {
+      lines.push(`Major decision: ${result.majorDecisionPrompt.label}`)
+    }
+    if (result?.dialogue?.message) lines.push(result.dialogue.message)
+    setOutput(lines.filter(Boolean).join('\n\n'))
+    setConsequenceBeat(result?.consequenceBeat ?? null)
+    setCommand('')
+  }, [])
+
+  const executeCommand = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed || busy) return
+
+      setBusy(true)
+      setError(null)
+      setConsequenceBeat(null)
+      try {
+        const res = await postCommand(trimmed)
+        applyCommandResult(res)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Command failed')
+      } finally {
+        setBusy(false)
+      }
+    },
+    [applyCommandResult, busy],
+  )
+
+  const runCommand = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed || busy) return
+
+      const decision = matchMajorDecision(trimmed, shell?.majorDecisions ?? [])
+      if (decision?.branchSuggested) {
+        setPendingDecision({ decision, command: trimmed })
+        return
+      }
+
+      await executeCommand(trimmed)
+    },
+    [busy, executeCommand, shell?.majorDecisions],
+  )
+
+  const refresh = useCallback(async () => {
     setPhase('loading')
     setError(null)
     try {
@@ -32,6 +97,7 @@ export function WorldMindPlayPortal() {
       setHealth(h)
       const state = await fetchState()
       setShell(state.gameShell)
+      setDistrictView(state.districtView ?? null)
       setPhase('ready')
     } catch {
       setPhase('offline')
@@ -39,36 +105,61 @@ export function WorldMindPlayPortal() {
   }, [])
 
   useEffect(() => {
-    void boot()
-  }, [boot])
+    let cancelled = false
 
-  const runCommand = async (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || busy) return
-
-    setBusy(true)
-    setError(null)
-    try {
-      const res = await postCommand(trimmed)
-      const result = res.result
-      if (result?.gameShell) setShell(result.gameShell)
-      const lines = [result?.text ?? res.text ?? 'Command completed.']
-      if (result?.leno?.summary) lines.push(`Leno: ${result.leno.summary}`)
-      if (result?.majorDecisionPrompt?.label) {
-        lines.push(`Major decision: ${result.majorDecisionPrompt.label}`)
+    async function boot() {
+      try {
+        const h = await fetchHealth()
+        if (cancelled) return
+        setHealth(h)
+        const state = await fetchState()
+        if (cancelled) return
+        setShell(state.gameShell)
+        setDistrictView(state.districtView ?? null)
+        setPhase('ready')
+      } catch {
+        if (!cancelled) setPhase('offline')
       }
-      setOutput(lines.filter(Boolean).join('\n\n'))
-      setCommand('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Command failed')
-    } finally {
-      setBusy(false)
     }
-  }
+
+    void boot()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     void runCommand(command)
+  }
+
+  const branchAndContinue = async () => {
+    if (!pendingDecision) return
+    const { command: cmd, decision } = pendingDecision
+    setPendingDecision(null)
+    setBusy(true)
+    setError(null)
+    try {
+      const save = await postSave({ note: `Before: ${cmd}` })
+      if (save.snapshotId) {
+        await postBranch({
+          name: `before-${decision.id}`,
+          snapshotId: save.snapshotId,
+          note: decision.label,
+        })
+      }
+      await executeCommand(cmd)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Branch failed')
+      setBusy(false)
+    }
+  }
+
+  const continueWithoutBranch = () => {
+    if (!pendingDecision) return
+    const { command: cmd } = pendingDecision
+    setPendingDecision(null)
+    void executeCommand(cmd)
   }
 
   if (phase === 'loading') {
@@ -85,10 +176,22 @@ export function WorldMindPlayPortal() {
   const location: GameShellLocation = shell?.location ?? { id: null, hotspots: [] }
   const founder = shell?.founder ?? { unlocked: false, contracts: [] }
   const sceneSrc = assetUrl(location.scene)
+  const playerLoc = districtView?.playerLocationId ?? location.id
 
   return (
     <div className="min-h-screen bg-void text-text">
       <div className="pointer-events-none fixed inset-0 z-[55] vignette" aria-hidden />
+
+      {pendingDecision && (
+        <MajorDecisionModal
+          decision={pendingDecision.decision}
+          command={pendingDecision.command}
+          busy={busy}
+          onBranchAndContinue={() => void branchAndContinue()}
+          onContinueWithout={continueWithoutBranch}
+          onCancel={() => setPendingDecision(null)}
+        />
+      )}
 
       <header className="border-b border-border/50 bg-void/90 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
@@ -130,7 +233,52 @@ export function WorldMindPlayPortal() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
+          <div className="space-y-6">
+            {districtView && districtView.nodes.length > 0 && (
+              <Card accent="neutral">
+                <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-3">District</p>
+                <svg viewBox="0 0 400 220" className="w-full h-auto rounded-lg border border-border/40 bg-elevated/30">
+                  {(districtView.edges ?? []).map((e) => {
+                    const from = districtView.nodes.find((n) => n.id === e.from)
+                    const to = districtView.nodes.find((n) => n.id === e.to)
+                    if (!from || !to) return null
+                    return (
+                      <line
+                        key={`${e.from}-${e.to}`}
+                        x1={from.x}
+                        y1={from.y}
+                        x2={to.x}
+                        y2={to.y}
+                        stroke="rgba(34,211,238,0.25)"
+                        strokeWidth={2}
+                      />
+                    )
+                  })}
+                  {districtView.nodes.map((node) => {
+                    const active = node.id === playerLoc
+                    return (
+                      <g key={node.id}>
+                        <circle
+                          cx={node.x}
+                          cy={node.y}
+                          r={active ? 18 : 14}
+                          fill={active ? 'rgba(245,158,11,0.35)' : 'rgba(34,211,238,0.15)'}
+                          stroke={active ? '#f59e0b' : 'rgba(34,211,238,0.5)'}
+                          strokeWidth={2}
+                          className="cursor-pointer"
+                          onClick={() => void runCommand(`move ${node.id}`)}
+                        />
+                        <text x={node.x} y={node.y + 32} textAnchor="middle" fill="#94a3b8" fontSize="10">
+                          {node.label}
+                        </text>
+                      </g>
+                    )
+                  })}
+                </svg>
+              </Card>
+            )}
+
           <Card accent="cyan">
             <div className="mb-4">
               <h2 className="font-display font-medium text-text-bright text-lg">{location.name ?? location.id ?? 'Location'}</h2>
@@ -176,48 +324,10 @@ export function WorldMindPlayPortal() {
               )}
             </div>
           </Card>
+          </div>
 
           <Card accent="registry" delay={0}>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h2 className="font-display font-medium text-text-bright">Founder</h2>
-              <span
-                className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${
-                  founder.unlocked
-                    ? 'border-amber/40 text-amber-glow bg-amber/10'
-                    : 'border-border text-muted bg-elevated/60'
-                }`}
-              >
-                {founder.unlocked ? founder.tierLabel ?? 'unlocked' : 'locked'}
-              </span>
-            </div>
-            <p className="text-sm text-muted leading-relaxed mb-4">
-              {founder.unlockText ?? 'Resolve The Missing Delivery to unlock founder loop.'}
-            </p>
-            <ul className="text-xs font-mono text-muted space-y-1 mb-4">
-              <li>Contracts completed: {founder.contractsCompleted ?? 0}</li>
-              {founder.activeContract && <li>Active: {founder.activeContract}</li>}
-            </ul>
-            <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-2">Contracts</p>
-            {founder.contracts.length === 0 ? (
-              <p className="text-sm text-muted italic">No contract offers yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {founder.contracts.map((c) => (
-                  <li key={c.id} className="rounded-lg border border-border/70 bg-void/50 p-3">
-                    <p className="text-sm text-text-bright mb-1">{c.label}</p>
-                    {c.reward && <p className="text-xs text-muted mb-2">{c.reward}</p>}
-                    <button
-                      type="button"
-                      disabled={busy || c.locked || !founder.unlocked}
-                      onClick={() => void runCommand(c.command)}
-                      className="font-mono text-xs px-3 py-1.5 rounded-md border border-registry/35 text-registry-glow bg-registry/5 hover:bg-registry/12 disabled:opacity-40 transition-colors"
-                    >
-                      {c.command}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <FounderPanel founder={founder} busy={busy} onCommand={(cmd) => void runCommand(cmd)} />
           </Card>
         </div>
 
@@ -250,6 +360,7 @@ export function WorldMindPlayPortal() {
               {error}
             </p>
           )}
+          <ConsequencePanel beat={consequenceBeat} />
           {output && (
             <pre className="mt-4 p-4 rounded-lg border border-border/70 bg-surface font-mono text-xs text-text leading-relaxed whitespace-pre-wrap">
               {output}
@@ -260,7 +371,7 @@ export function WorldMindPlayPortal() {
         <p className="text-center">
           <button
             type="button"
-            onClick={() => void boot()}
+            onClick={() => void refresh()}
             className="font-mono text-xs text-muted hover:text-cyan-glow transition-colors"
           >
             Refresh state

@@ -1,14 +1,21 @@
-export const CORE_URL = (import.meta.env.VITE_WORLDMIND_CORE_URL ?? 'http://127.0.0.1:8080').replace(
-  /\/$/,
-  '',
-)
+function resolveCoreUrl(): string {
+  const configured = import.meta.env.VITE_WORLDMIND_CORE_URL
+  if (configured) return configured.replace(/\/$/, '')
+  if (import.meta.env.DEV) return 'http://127.0.0.1:8080'
+  return ''
+}
+
+export const CORE_URL = resolveCoreUrl()
 
 export interface GameShellHotspot {
   id: string
   label: string
   command: string
   preview?: string
+  description?: string
   risk?: number
+  possibleEvidence?: string[]
+  icon?: string | null
 }
 
 export interface GameShellLocation {
@@ -33,10 +40,11 @@ export interface GameShellTopbar {
 export interface FounderContract {
   id: string
   label: string
-  command: string
-  tier?: number
-  reward?: string
+  customer?: string
+  payout?: number
+  status?: 'locked' | 'available' | 'active'
   locked?: boolean
+  reward?: string
 }
 
 export interface GameShellFounder {
@@ -51,6 +59,20 @@ export interface GameShellFounder {
   unlockText?: string
 }
 
+export interface MajorDecision {
+  id: string
+  label: string
+  command?: string
+  branchSuggested?: boolean
+  requiredEvidence?: string[]
+}
+
+export interface ConsequenceBeat {
+  categories: string[]
+  bullets: { category: string; text: string }[]
+  summary: string
+}
+
 export interface GameShell {
   topbar: GameShellTopbar
   location: GameShellLocation
@@ -58,7 +80,20 @@ export interface GameShell {
   npcCards?: unknown[]
   caseBoard?: unknown
   rumorTrail?: unknown[]
-  majorDecisions?: unknown[]
+  majorDecisions?: MajorDecision[]
+}
+
+export interface DistrictNode {
+  id: string
+  label: string
+  x: number
+  y: number
+}
+
+export interface DistrictView {
+  nodes: DistrictNode[]
+  edges?: { from: string; to: string }[]
+  playerLocationId?: string | null
 }
 
 export interface HealthResponse {
@@ -76,6 +111,7 @@ export interface StateResponse {
   day?: number
   time?: string
   gameShell: GameShell
+  districtView?: DistrictView
   playerSnapshot?: { money?: number; reputation?: number; energy?: number }
 }
 
@@ -88,7 +124,10 @@ export interface CommandResult {
     gameShell?: GameShell
     playerSnapshot?: { money?: number; reputation?: number; energy?: number }
     leno?: { summary?: string }
-    majorDecisionPrompt?: { id: string; label: string; command: string }
+    majorDecisionPrompt?: MajorDecision
+    consequence?: Record<string, unknown>
+    consequenceBeat?: ConsequenceBeat
+    dialogue?: { message?: string; evidenceIds?: string[] }
   }
 }
 
@@ -101,6 +140,26 @@ export function assetUrl(relativePath: string | null | undefined) {
   if (/^https?:\/\//.test(relativePath)) return relativePath
   const normalized = relativePath.startsWith('/') ? relativePath : `/${relativePath}`
   return `${CORE_URL}${normalized}`
+}
+
+export function founderContractCommand(
+  contract: FounderContract,
+  founder: GameShellFounder,
+): string | null {
+  if (!founder.unlocked) return null
+  if (contract.status === 'active') return 'run_delivery_contract'
+  if (contract.status === 'available') return `start_delivery_workflow ${contract.id}`
+  return null
+}
+
+export function matchMajorDecision(cmd: string, decisions: MajorDecision[] = []): MajorDecision | null {
+  const n = cmd.trim().toLowerCase()
+  if (!n) return null
+  for (const d of decisions) {
+    const dc = (d.command ?? '').trim().toLowerCase()
+    if (dc && (n === dc || n.startsWith(dc))) return d
+  }
+  return null
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
@@ -127,4 +186,24 @@ export async function postCommand(text: string): Promise<CommandResult> {
   })
   if (!res.ok) throw new Error(`Command failed (${res.status})`)
   return (await res.json()) as CommandResult
+}
+
+export async function postSave(body: { branchName?: string; note?: string } = {}) {
+  const res = await fetch(corePath('/api/save'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Save failed (${res.status})`)
+  return (await res.json()) as { ok: boolean; snapshotId?: string }
+}
+
+export async function postBranch(body: { name: string; snapshotId: string; note?: string }) {
+  const res = await fetch(corePath('/api/branch'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Branch failed (${res.status})`)
+  return (await res.json()) as { ok: boolean; branchId?: string }
 }
