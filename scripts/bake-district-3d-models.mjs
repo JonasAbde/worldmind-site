@@ -53,6 +53,15 @@ function stdMat(color, opts = {}) {
   return new THREE.MeshStandardMaterial(params)
 }
 
+function addDoor(group, w, h, d, trimColor) {
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.55, 0.14), stdMat('#1c1917', { roughness: 0.9 }))
+  door.position.set(0, 0.78, d / 2 + 0.08)
+  group.add(door)
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.75, 0.06), stdMat(trimColor, { emissive: trimColor, emissiveIntensity: 0.35 }))
+  frame.position.set(0, 0.88, d / 2 + 0.04)
+  group.add(frame)
+}
+
 function addResidential(group, p) {
   const [w, h, d] = p.footprint
   const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), stdMat(p.wall))
@@ -64,13 +73,19 @@ function addResidential(group, p) {
   roof.position.y = h + 0.175
   group.add(roof)
   for (const x of [-0.9, 0.9]) {
-    const win = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.12), stdMat('#0f172a', { emissive: p.emissive, emissiveIntensity: 0.35 }))
-    win.position.set(x, h * 0.55, d / 2 + 0.06)
-    group.add(win)
+    for (const y of [0.45, 1.15]) {
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.12), stdMat('#0f172a', { emissive: p.emissive, emissiveIntensity: 0.35 }))
+      win.position.set(x, h * 0.35 + y, d / 2 + 0.06)
+      group.add(win)
+    }
   }
+  const balcony = new THREE.Mesh(new THREE.BoxGeometry(w * 0.55, 0.08, 0.55), stdMat('#334155'))
+  balcony.position.set(0, h * 0.72, d / 2 + 0.28)
+  group.add(balcony)
   const strip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.06, 0.08), stdMat(p.trim, { emissive: p.trim, emissiveIntensity: 1.1 }))
-  strip.position.y = h * 0.25
+  strip.position.set(0, h * 0.25, d / 2 + 0.05)
   group.add(strip)
+  addDoor(group, w, h, d, p.trim)
 }
 
 function addCafe(group, p) {
@@ -84,11 +99,21 @@ function addCafe(group, p) {
   awning.position.set(0, h + 0.08, d / 2 + 0.35)
   awning.rotation.x = 0.15
   group.add(awning)
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.28, 0.08), stdMat(p.emissive, { emissive: p.emissive, emissiveIntensity: 0.9 }))
+  sign.position.set(0, h + 0.55, d / 2 + 0.12)
+  group.add(sign)
+  const display = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.1), stdMat('#0f172a', { emissive: '#fde68a', emissiveIntensity: 0.25 }))
+  display.position.set(-0.9, h * 0.45, d / 2 + 0.08)
+  group.add(display)
   for (const x of [-0.8, 0.8]) {
     const table = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.7, 8), stdMat('#44403c'))
     table.position.set(x, 0.35, d / 2 + 0.5)
     group.add(table)
+    const chair = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), stdMat('#57534e'))
+    chair.position.set(x, 0.2, d / 2 + 0.95)
+    group.add(chair)
   }
+  addDoor(group, w, h, d, p.trim)
 }
 
 function addMarket(group, p) {
@@ -102,10 +127,18 @@ function addMarket(group, p) {
     stall.position.set(x, h / 2, 0)
     stall.castShadow = true
     group.add(stall)
+    const awning = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.05, 1.35), stdMat(x === 0 ? p.trim : '#115e59', { emissive: p.emissive, emissiveIntensity: 0.35 }))
+    awning.position.set(x, h + 0.35, 0)
+    group.add(awning)
   }
   const canopy = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 0.08, d), stdMat(p.trim, { emissive: p.emissive, emissiveIntensity: 0.55 }))
   canopy.position.y = h + 0.5
   group.add(canopy)
+  for (const [x, z] of [[-1.4, 0.8], [1.3, -0.6], [0.2, 1.1]]) {
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.45), stdMat('#78350f'))
+    crate.position.set(x, 0.18, z)
+    group.add(crate)
+  }
 }
 
 function addIndustrial(group, p) {
@@ -115,12 +148,25 @@ function addIndustrial(group, p) {
   body.castShadow = true
   body.receiveShadow = true
   group.add(body)
+  const garage = new THREE.Mesh(new THREE.BoxGeometry(w * 0.55, h * 0.55, 0.12), stdMat('#1e293b', { metalness: 0.55 }))
+  garage.position.set(0, h * 0.32, d / 2 + 0.08)
+  group.add(garage)
   const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.6, 8), stdMat('#64748b', { metalness: 0.6 }))
   chimney.position.set(w / 2 - 0.2, h + 0.9, 0)
   group.add(chimney)
+  const stack = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.04, 6, 12), stdMat('#475569', { metalness: 0.7 }))
+  stack.position.set(w / 2 - 0.2, h + 1.75, 0)
+  stack.rotation.x = Math.PI / 2
+  group.add(stack)
   const panel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.15), stdMat(p.emissive, { emissive: p.emissive, emissiveIntensity: 0.85 }))
   panel.position.set(-w / 3, h * 0.6, d / 2 + 0.1)
   group.add(panel)
+  for (const z of [-0.6, 0.6]) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, w * 0.7, 6), stdMat('#64748b', { metalness: 0.5 }))
+    pipe.rotation.z = Math.PI / 2
+    pipe.position.set(0, h * 0.85, z)
+    group.add(pipe)
+  }
 }
 
 function addCivic(group, p) {
@@ -129,10 +175,26 @@ function addCivic(group, p) {
   plaza.rotation.x = -Math.PI / 2
   plaza.position.y = 0.06
   group.add(plaza)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(w / 2 - 0.35, w / 2 - 0.15, 32), stdMat(p.trim, { emissive: p.emissive, emissiveIntensity: 0.35 }))
+  ring.rotation.x = -Math.PI / 2
+  ring.position.y = 0.08
+  group.add(ring)
   const obelisk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, h, 6), stdMat(p.trim, { emissive: p.emissive, emissiveIntensity: 0.45 }))
   obelisk.position.y = h / 2
   obelisk.castShadow = true
   group.add(obelisk)
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.35, 6), stdMat(p.emissive, { emissive: p.emissive, emissiveIntensity: 0.6 }))
+  cap.position.y = h + 0.15
+  group.add(cap)
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.9, 6), stdMat('#334155'))
+    pillar.position.set(Math.cos(angle) * (w / 2 - 0.55), 0.45, Math.sin(angle) * (w / 2 - 0.55))
+    group.add(pillar)
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), stdMat(p.emissive, { emissive: p.emissive, emissiveIntensity: 0.7 }))
+    lamp.position.set(pillar.position.x, 0.95, pillar.position.z)
+    group.add(lamp)
+  }
 }
 
 function buildLocationScene(id, preset) {

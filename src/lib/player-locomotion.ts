@@ -1,4 +1,4 @@
-import type { VisualCues, VisualCuesLocation } from './play-api'
+﻿import type { VisualCues, VisualCuesLocation, VisualCuesLocationCollision } from './play-api'
 
 export const LOCOMOTION = {
   walkSpeed: 5.8,
@@ -8,7 +8,7 @@ export const LOCOMOTION = {
   playerY: 0.1,
   districtMin: -16,
   districtMax: 16,
-  /** Solid building core — walkable street ring is outside this. */
+  /** Fallback circle when API collision is missing (legacy cues). */
   buildingRadius: 1.65,
   /** Softer zone at current location so you can leave the anchor. */
   currentLocationRadius: 0.85,
@@ -69,25 +69,73 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
 }
 
-type BuildingCircle = { x: number; z: number; r: number; id: string }
-
-function buildingCenters(
-  locations: VisualCuesLocation[],
-  currentLocationId?: string | null,
-): BuildingCircle[] {
-  return locations.map((loc) => {
-    const pos = loc.position as [number, number, number]
-    const r =
-      loc.id === currentLocationId ? LOCOMOTION.currentLocationRadius : LOCOMOTION.buildingRadius
-    return { x: pos[0], z: pos[2], r, id: loc.id }
-  })
+type BuildingCollider = {
+  x: number
+  z: number
+  id: string
+  isCurrent: boolean
+  shape: 'box' | 'circle'
+  halfExtents: [number, number]
+  radius: number
+  currentLocationRadius: number
 }
 
-function collidesWithBuildings(x: number, z: number, buildings: BuildingCircle[]) {
+function colliderFromLocation(
+  loc: VisualCuesLocation,
+  isCurrent: boolean,
+): BuildingCollider {
+  const pos = loc.position as [number, number, number]
+  const col = loc.collision as VisualCuesLocationCollision | undefined
+  if (col?.halfExtents && typeof col.radius === 'number') {
+    return {
+      x: pos[0],
+      z: pos[2],
+      id: loc.id,
+      isCurrent,
+      shape: col.shape === 'circle' ? 'circle' : 'box',
+      halfExtents: [col.halfExtents[0], col.halfExtents[1]],
+      radius: col.radius,
+      currentLocationRadius: col.currentLocationRadius ?? LOCOMOTION.currentLocationRadius,
+    }
+  }
+  const r = isCurrent ? LOCOMOTION.currentLocationRadius : LOCOMOTION.buildingRadius
+  return {
+    x: pos[0],
+    z: pos[2],
+    id: loc.id,
+    isCurrent,
+    shape: 'circle',
+    halfExtents: [r, r],
+    radius: r,
+    currentLocationRadius: LOCOMOTION.currentLocationRadius,
+  }
+}
+
+function buildingColliders(
+  locations: VisualCuesLocation[],
+  currentLocationId?: string | null,
+): BuildingCollider[] {
+  return locations.map((loc) => colliderFromLocation(loc, loc.id === currentLocationId))
+}
+
+function pointInCollider(px: number, pz: number, b: BuildingCollider): boolean {
+  if (b.isCurrent) {
+    const dx = px - b.x
+    const dz = pz - b.z
+    const r = b.currentLocationRadius
+    return dx * dx + dz * dz < r * r
+  }
+  if (b.shape === 'circle') {
+    const dx = px - b.x
+    const dz = pz - b.z
+    return dx * dx + dz * dz < b.radius * b.radius
+  }
+  return Math.abs(px - b.x) < b.halfExtents[0] && Math.abs(pz - b.z) < b.halfExtents[1]
+}
+
+function collidesWithBuildings(x: number, z: number, buildings: BuildingCollider[]) {
   for (const b of buildings) {
-    const dx = x - b.x
-    const dz = z - b.z
-    if (dx * dx + dz * dz < b.r * b.r) return true
+    if (pointInCollider(x, z, b)) return true
   }
   return false
 }
@@ -95,7 +143,7 @@ function collidesWithBuildings(x: number, z: number, buildings: BuildingCircle[]
 export function clampDistrictPosition(
   x: number,
   z: number,
-  buildings: BuildingCircle[],
+  buildings: BuildingCollider[],
 ): [number, number] {
   let nx = Math.max(LOCOMOTION.districtMin, Math.min(LOCOMOTION.districtMax, x))
   let nz = Math.max(LOCOMOTION.districtMin, Math.min(LOCOMOTION.districtMax, z))
@@ -111,7 +159,7 @@ export function clampDistrictPosition(
 function clampAxis(
   x: number,
   z: number,
-  buildings: BuildingCircle[],
+  buildings: BuildingCollider[],
   axis: 'x' | 'z',
 ): [number, number] | null {
   const cx = Math.max(LOCOMOTION.districtMin, Math.min(LOCOMOTION.districtMax, x))
@@ -169,7 +217,7 @@ export function integrateLocomotion(
   const step = Math.min(dt, LOCOMOTION.maxDeltaSec)
   const dir = inputToWorldDirection(keys, cameraYaw)
   const maxSpeed = keys.sprint ? LOCOMOTION.sprintSpeed : LOCOMOTION.walkSpeed
-  const buildings = buildingCenters(locations, currentLocationId)
+  const buildings = buildingColliders(locations, currentLocationId)
 
   let { vx, vz } = velocity
   if (dir) {

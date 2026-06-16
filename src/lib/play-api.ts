@@ -214,6 +214,14 @@ export interface VisualCuesAgent {
   commands: { talk: string; ask: string; pay: string; leno: string }
 }
 
+export interface VisualCuesLocationCollision {
+  shape?: 'box' | 'circle'
+  footprint?: [number, number]
+  halfExtents: [number, number]
+  radius: number
+  currentLocationRadius?: number
+}
+
 export interface VisualCuesLocation {
   id: string
   label: string
@@ -230,6 +238,9 @@ export interface VisualCuesLocation {
   isPlayerHere?: boolean
   walkAnchor?: number[]
   interiorCamera?: { eye: number[]; target: number[] }
+  footprint?: [number, number, number]
+  buildingStyle?: string
+  collision?: VisualCuesLocationCollision
   agents?: VisualCuesAgent[]
 }
 
